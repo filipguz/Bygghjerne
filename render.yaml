@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: bygghjerne
+    runtime: docker
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

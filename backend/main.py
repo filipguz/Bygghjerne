@@ -110,7 +110,7 @@ def chat(request: ChatRequest):
     result = supabase_client.rpc(
         "match_chunks",
         {
-            "query_embedding": question_embedding,
+            "query_embedding": "[" + ",".join(str(x) for x in question_embedding) + "]",
             "match_threshold": MATCH_THRESHOLD,
             "match_count": MATCH_COUNT,
         },

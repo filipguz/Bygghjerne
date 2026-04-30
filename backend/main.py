@@ -32,7 +32,7 @@ CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 EMBEDDING_MODEL = "voyage-multilingual-2"   # 1024 dims, støtter norsk
 CHAT_MODEL = "claude-sonnet-4-6"
-MATCH_THRESHOLD = 0.5
+MATCH_THRESHOLD = 0.3
 MATCH_COUNT = 5
 
 

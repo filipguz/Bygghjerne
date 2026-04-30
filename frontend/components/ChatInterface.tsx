@@ -16,7 +16,7 @@ interface Message {
   sources?: Source[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,7 +40,7 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/chat`, {
+      const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),

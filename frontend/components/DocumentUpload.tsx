@@ -7,7 +7,7 @@ interface UploadResult {
   chunks: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "/api/backend";
 
 export default function DocumentUpload() {
   const [uploading, setUploading] = useState(false);
@@ -26,7 +26,7 @@ export default function DocumentUpload() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: form });
+      const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: form });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.detail || "Opplasting feilet.");

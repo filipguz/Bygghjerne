@@ -21,26 +21,30 @@ export default function Login() {
     setInfo(null);
     setLoading(true);
 
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("Feil e-post eller passord.");
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setError("Feil e-post eller passord.");
+        } else {
+          router.push("/assistent");
+          router.refresh();
+        }
       } else {
-        router.push("/assistent");
-        router.refresh();
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          setError(error.message);
+        } else {
+          setInfo("Sjekk e-posten din for en bekreftelseslenke.");
+        }
       }
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
-        setInfo("Sjekk e-posten din for en bekreftelseslenke.");
-      }
+    } catch {
+      setError("Noe gikk galt. Prøv igjen.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (

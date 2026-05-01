@@ -12,12 +12,17 @@ export default function Landing() {
           </svg>
           <span className="font-bold text-brand-900 text-lg">Bygghjerne</span>
         </div>
-        <Link
-          href="/assistent"
-          className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
-        >
-          Åpne appen
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/om-oss" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
+            Om oss
+          </Link>
+          <Link
+            href="/assistent"
+            className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          >
+            Åpne appen
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}

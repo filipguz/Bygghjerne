@@ -6,7 +6,7 @@ const founders = [
     name: "Christian Widerø",
     role: "Grunder",
     photo: "/profil1.jpeg",
-    bio: "Christian har lang erfaring fra driftsbransjen og så på nært hold hvordan verdifull kunnskap om store bygg forsvinner når erfarne folk slutter. Den observasjonen ble starten på Bygghjerne.",
+    bio: "Christian er serviceleder hos Bravida Norge og har i over fire år jobbet tett på drift og vedlikehold av store tekniske anlegg. Han kjenner utfordringene på kroppen — og bygget Bygghjerne for å løse dem.",
   },
   {
     name: "Filip Gustavsen",

@@ -30,7 +30,7 @@ export default function Landing() {
       <section className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-28 overflow-hidden">
         {/* Background animation */}
         <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-          <div className="w-full max-w-3xl h-96">
+          <div className="w-full h-96">
             <NeuralAnimation />
           </div>
         </div>

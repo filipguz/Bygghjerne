@@ -160,13 +160,21 @@ export default function OmOss() {
       </section>
 
       {/* CTA */}
-      <section className="bg-brand-900 py-16 px-6 text-center">
-        <h2 className="text-2xl font-bold text-white mb-3">Klar til å prøve?</h2>
-        <p className="text-brand-300 mb-8">Last opp driftsdokumentene dine og still ditt første spørsmål.</p>
-        <Link href="/assistent"
-          className="bg-white text-brand-900 px-8 py-4 rounded-xl text-base font-semibold hover:bg-brand-50 transition-colors">
-          Kom i gang gratis
-        </Link>
+      <section className="py-24 px-6">
+        <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand-500">Kom i gang</p>
+          <h2 className="text-3xl font-bold text-slate-900">Klar til å prøve?</h2>
+          <p className="text-slate-500 max-w-md">
+            Last opp driftsdokumentene dine og still ditt første spørsmål — det tar under ett minutt.
+          </p>
+          <Link href="/assistent"
+            className="inline-flex items-center gap-2 bg-brand-600 text-white px-7 py-3.5 rounded-xl text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
+            Åpne Bygghjerne
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+        </div>
       </section>
 
       <footer className="py-8 text-center text-sm text-slate-400">

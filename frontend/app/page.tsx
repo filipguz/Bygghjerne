@@ -18,10 +18,10 @@ export default function Landing() {
             Om oss
           </Link>
           <Link
-            href="/assistent"
+            href="/login"
             className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
           >
-            Åpne appen
+            Prøv gratis
           </Link>
         </div>
       </nav>
@@ -51,10 +51,10 @@ export default function Landing() {
           </p>
 
           <Link
-            href="/assistent"
+            href="/login"
             className="bg-brand-600 text-white px-8 py-4 rounded-xl text-base font-semibold hover:bg-brand-700 transition-colors shadow-sm"
           >
-            Kom i gang gratis
+            Prøv gratis
           </Link>
         </div>
       </section>

@@ -1,6 +1,7 @@
 import BackendWakeup from "@/components/BackendWakeup";
 import ChatInterface from "@/components/ChatInterface";
 import DocumentUpload from "@/components/DocumentUpload";
+import LogoutButton from "@/components/LogoutButton";
 import Link from "next/link";
 
 export default function Assistent() {
@@ -19,6 +20,7 @@ export default function Assistent() {
               <p className="text-xs text-brand-300">AI-driftsassistent for bygget</p>
             </div>
           </Link>
+          <LogoutButton />
         </div>
       </header>
 

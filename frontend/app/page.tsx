@@ -29,7 +29,7 @@ export default function Landing() {
       {/* Hero */}
       <section className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-28 overflow-hidden">
         {/* Background animation */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
           <div className="w-full max-w-3xl h-96">
             <NeuralAnimation />
           </div>

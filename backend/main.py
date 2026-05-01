@@ -53,6 +53,28 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/documents")
+def list_documents():
+    docs = supabase_client.table("documents").select("id, filename, created_at").order("created_at", desc=True).execute()
+    result = []
+    for doc in docs.data:
+        count_result = supabase_client.table("document_chunks").select("id", count="exact").eq("document_id", doc["id"]).execute()
+        result.append({
+            "id": doc["id"],
+            "filename": doc["filename"],
+            "created_at": doc.get("created_at"),
+            "chunks": count_result.count or 0,
+        })
+    return result
+
+
+@app.delete("/documents/{document_id}")
+def delete_document(document_id: str):
+    supabase_client.table("document_chunks").delete().eq("document_id", document_id).execute()
+    supabase_client.table("documents").delete().eq("id", document_id).execute()
+    return {"ok": True}
+
+
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):

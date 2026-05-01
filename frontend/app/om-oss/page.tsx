@@ -10,7 +10,7 @@ const founders = [
   },
   {
     name: "Filip Gustavsen",
-    role: "Utvikler",
+    role: "Med-grunder & Utvikler",
     photo: "/profil1.jpeg",
     bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
   },

@@ -121,7 +121,6 @@ export default function OmOss() {
                   <p className="font-semibold text-slate-900 text-lg">{f.name}</p>
                   <p className="text-sm text-brand-600 font-medium">{f.role}</p>
                 </div>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.bio}</p>
               </div>
             ))}
           </div>

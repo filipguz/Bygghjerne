@@ -12,7 +12,7 @@ const founders = [
     name: "Filip Gustavsen",
     role: "Utvikler",
     photo: "/profil2.jpeg",
-    bio: "Filip bygger teknologien som gjør Bygghjerne mulig — fra vektorsøk og AI-integrasjon til grensesnitt som fungerer for folk som ikke er tekniske.",
+    bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
   },
 ];
 

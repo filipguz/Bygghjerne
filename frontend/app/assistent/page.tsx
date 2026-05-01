@@ -1,9 +1,11 @@
+import BackendWakeup from "@/components/BackendWakeup";
 import ChatInterface from "@/components/ChatInterface";
 import DocumentUpload from "@/components/DocumentUpload";
 import Link from "next/link";
 
 export default function Assistent() {
   return (
+    <BackendWakeup>
     <div className="min-h-screen flex flex-col">
       <header className="bg-brand-900 text-white px-6 py-4 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -31,5 +33,6 @@ export default function Assistent() {
         </section>
       </main>
     </div>
+    </BackendWakeup>
   );
 }

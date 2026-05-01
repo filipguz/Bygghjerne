@@ -5,13 +5,13 @@ const founders = [
   {
     name: "Christian Widerø",
     role: "Grunder",
-    photo: "/profil1.jpeg",
+    photo: "/profil2.jpeg",
     bio: "Christian er serviceleder hos Bravida Norge og har i over fire år jobbet tett på drift og vedlikehold av store tekniske anlegg. Han kjenner utfordringene på kroppen — og bygget Bygghjerne for å løse dem.",
   },
   {
     name: "Filip Gustavsen",
     role: "Utvikler",
-    photo: "/profil2.jpeg",
+    photo: "/profil1.jpeg",
     bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
   },
 ];

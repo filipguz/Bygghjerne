@@ -1,3 +1,4 @@
+import NeuralAnimation from "@/components/NeuralAnimation";
 import Link from "next/link";
 
 export default function Landing() {
@@ -26,26 +27,32 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20">
-        <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
-          <span className="h-2 w-2 rounded-full bg-brand-500 inline-block"></span>
-          AI-drevet driftsassistent
+      <section className="flex-1 max-w-6xl mx-auto w-full px-6 py-20 flex flex-col md:flex-row items-center gap-12">
+        <div className="flex-1 flex flex-col items-start">
+          <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+            <span className="h-2 w-2 rounded-full bg-brand-500 inline-block"></span>
+            AI-drevet driftsassistent
+          </div>
+
+          <h1 className="text-5xl font-bold text-slate-900 leading-tight mb-6">
+            Hele byggets kunnskap,<br />alltid tilgjengelig
+          </h1>
+
+          <p className="text-lg text-slate-500 max-w-md mb-10">
+            Last opp driftshåndbøker, tegninger og servicerapporter. Still spørsmål på norsk og få presise svar — basert på dine egne dokumenter.
+          </p>
+
+          <Link
+            href="/assistent"
+            className="bg-brand-600 text-white px-8 py-4 rounded-xl text-base font-semibold hover:bg-brand-700 transition-colors shadow-sm"
+          >
+            Kom i gang gratis
+          </Link>
         </div>
 
-        <h1 className="text-5xl font-bold text-slate-900 max-w-2xl leading-tight mb-6">
-          Hele byggets kunnskap,<br />alltid tilgjengelig
-        </h1>
-
-        <p className="text-lg text-slate-500 max-w-xl mb-10">
-          Last opp driftshåndbøker, tegninger og servicerapporter. Still spørsmål på norsk og få presise svar — basert på dine egne dokumenter.
-        </p>
-
-        <Link
-          href="/assistent"
-          className="bg-brand-600 text-white px-8 py-4 rounded-xl text-base font-semibold hover:bg-brand-700 transition-colors shadow-sm"
-        >
-          Kom i gang gratis
-        </Link>
+        <div className="flex-1 w-full max-w-md h-72">
+          <NeuralAnimation />
+        </div>
       </section>
 
       {/* Features */}

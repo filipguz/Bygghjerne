@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { apiFetch } from "@/utils/api";
+import { apiFetch, apiErrorMessage } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
 import SourceCard from "./SourceCard";
 
@@ -46,8 +46,7 @@ export default function ChatInterface() {
         body: JSON.stringify({ question, building_id: buildingId }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Noe gikk galt.");
+        throw new Error(await apiErrorMessage(res));
       }
       const data: { answer: string; sources: Source[] } = await res.json();
       setMessages((prev) => [

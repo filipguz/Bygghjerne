@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 interface BuildingContextValue {
   buildingId: string | null;
   buildingName: string | null;
+  loaded: boolean;
   setBuilding: (id: string, name: string) => void;
   clearBuilding: () => void;
 }
@@ -12,6 +13,7 @@ interface BuildingContextValue {
 const BuildingContext = createContext<BuildingContextValue>({
   buildingId: null,
   buildingName: null,
+  loaded: false,
   setBuilding: () => {},
   clearBuilding: () => {},
 });
@@ -19,10 +21,12 @@ const BuildingContext = createContext<BuildingContextValue>({
 export function BuildingProvider({ children }: { children: React.ReactNode }) {
   const [buildingId, setBuildingId] = useState<string | null>(null);
   const [buildingName, setBuildingName] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setBuildingId(localStorage.getItem("building_id"));
     setBuildingName(localStorage.getItem("building_name"));
+    setLoaded(true);
   }, []);
 
   function setBuilding(id: string, name: string) {
@@ -40,7 +44,7 @@ export function BuildingProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <BuildingContext.Provider value={{ buildingId, buildingName, setBuilding, clearBuilding }}>
+    <BuildingContext.Provider value={{ buildingId, buildingName, loaded, setBuilding, clearBuilding }}>
       {children}
     </BuildingContext.Provider>
   );

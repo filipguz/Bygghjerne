@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch } from "@/utils/api";
+import { apiFetch, apiErrorMessage } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
 
 interface Document {
@@ -46,8 +46,7 @@ export default function DocumentUpload() {
       form.append("building_id", buildingId);
       const res = await apiFetch("/upload", { method: "POST", body: form });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Opplasting feilet.");
+        throw new Error(await apiErrorMessage(res));
       }
       await fetchDocuments();
     } catch (e: unknown) {

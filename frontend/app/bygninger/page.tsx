@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiFetch } from "@/utils/api";
+import { apiFetch, apiErrorMessage } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -68,10 +68,7 @@ export default function Bygninger() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, address: address || null }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Kunne ikke opprette bygg.");
-      }
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       const building: Building = await res.json();
       setBuildings((prev) => [...prev, building].sort((a, b) => a.name.localeCompare(b.name)));
       setShowForm(false);
@@ -101,10 +98,7 @@ export default function Bygninger() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: editName, address: editAddress || null }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Kunne ikke oppdatere bygget.");
-      }
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       const updated: Building = await res.json();
       setBuildings((prev) =>
         prev.map((b) => (b.id === updated.id ? updated : b)).sort((a, b) => a.name.localeCompare(b.name))
@@ -121,10 +115,7 @@ export default function Bygninger() {
     setDeletingId(id);
     try {
       const res = await apiFetch(`/buildings/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Kunne ikke slette bygget.");
-      }
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
       setBuildings((prev) => prev.filter((b) => b.id !== id));
       clearBuilding();
       setConfirmDeleteId(null);

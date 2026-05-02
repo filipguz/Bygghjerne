@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/utils/api";
+import { useBuilding } from "@/utils/building-context";
 import SourceCard from "./SourceCard";
 
 interface Source {
@@ -16,15 +18,13 @@ interface Message {
   sources?: Source[];
 }
 
-const API_BASE = "/api/backend";
-
 export default function ChatInterface() {
+  const { buildingId } = useBuilding();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,7 +32,7 @@ export default function ChatInterface() {
 
   async function sendMessage() {
     const question = input.trim();
-    if (!question || loading) return;
+    if (!question || loading || !buildingId) return;
 
     setInput("");
     setError(null);
@@ -40,10 +40,10 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await apiFetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, building_id: buildingId }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -74,7 +74,6 @@ export default function ChatInterface() {
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-semibold text-slate-800 mb-4">Spør om bygget</h2>
 
-      {/* Message list */}
       <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 pr-1 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-2 py-16">
@@ -129,17 +128,14 @@ export default function ChatInterface() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Error */}
       {error && (
         <p className="mt-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 border border-red-200">
           {error}
         </p>
       )}
 
-      {/* Input */}
       <div className="mt-4 flex gap-2 items-end">
         <textarea
-          ref={textareaRef}
           rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}

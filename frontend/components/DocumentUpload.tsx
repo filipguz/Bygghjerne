@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/utils/api";
+import { useBuilding } from "@/utils/building-context";
 
 interface Document {
   id: string;
@@ -9,9 +11,8 @@ interface Document {
   chunks: number;
 }
 
-const API_BASE = "/api/backend";
-
 export default function DocumentUpload() {
+  const { buildingId } = useBuilding();
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -20,17 +21,19 @@ export default function DocumentUpload() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(async () => {
+    if (!buildingId) return;
     try {
-      const res = await fetch(`${API_BASE}/documents`);
+      const res = await apiFetch(`/documents?building_id=${buildingId}`);
       if (res.ok) setDocuments(await res.json());
     } catch {}
-  }, []);
+  }, [buildingId]);
 
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
 
   async function handleFile(file: File) {
+    if (!buildingId) return;
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setError("Kun PDF-filer støttes.");
       return;
@@ -40,7 +43,8 @@ export default function DocumentUpload() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: form });
+      form.append("building_id", buildingId);
+      const res = await apiFetch("/upload", { method: "POST", body: form });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.detail || "Opplasting feilet.");
@@ -54,9 +58,10 @@ export default function DocumentUpload() {
   }
 
   async function handleDelete(id: string) {
+    if (!buildingId) return;
     setDeleting(id);
     try {
-      await fetch(`${API_BASE}/documents/${id}`, { method: "DELETE" });
+      await apiFetch(`/documents/${id}?building_id=${buildingId}`, { method: "DELETE" });
       setDocuments((prev) => prev.filter((d) => d.id !== id));
     } catch {
       setError("Kunne ikke slette dokumentet.");

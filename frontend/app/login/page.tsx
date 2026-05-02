@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import { apiFetch } from "@/utils/api";
 
 export default function Login() {
   const router = useRouter();
@@ -29,7 +30,9 @@ export default function Login() {
         if (error) {
           setError("Feil e-post eller passord.");
         } else {
-          router.push("/assistent");
+          const orgRes = await apiFetch("/orgs/me");
+          const org = orgRes.ok ? await orgRes.json() : null;
+          router.push(org ? "/bygninger" : "/onboarding");
           router.refresh();
         }
       } else {

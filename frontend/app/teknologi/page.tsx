@@ -6,7 +6,7 @@ const steps = [
     number: "01",
     title: "Du laster opp en PDF",
     description:
-      "Bygghjerneserveren leser PDF-en med pypdf og trekker ut all tekst. Filen lagres ikke i sin opprinnelige form — bare teksten brukes videre.",
+      "Serv24-serveren leser PDF-en med pypdf og trekker ut all tekst. Filen lagres ikke i sin opprinnelige form — bare teksten brukes videre.",
     detail: "Støtter driftshåndbøker, servicerapporter, tegningsbeskrivelser og andre tekniske dokumenter.",
   },
   {
@@ -96,9 +96,9 @@ export default function Teknologi() {
           <span className="h-2 w-2 rounded-full bg-brand-500 inline-block" />
           Under panseret
         </div>
-        <h1 className="text-4xl font-bold text-slate-900 mb-4">Slik fungerer Bygghjerne</h1>
+        <h1 className="text-4xl font-bold text-slate-900 mb-4">Slik fungerer Serv24</h1>
         <p className="text-lg text-slate-500 leading-relaxed">
-          Bygghjerne bruker en teknikk kalt RAG — Retrieval-Augmented Generation. I stedet for å la AI-en gjette,
+          Serv24 bruker en teknikk kalt RAG — Retrieval-Augmented Generation. I stedet for å la AI-en gjette,
           henter vi de relevante utdragene fra dine egne dokumenter og gir dem som kontekst til Claude.
           Svaret er alltid forankret i det du har lastet opp.
         </p>
@@ -136,7 +136,7 @@ export default function Teknologi() {
       <section className="py-16 px-6">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-slate-900 mb-2 text-center">Teknologistakken</h2>
-          <p className="text-slate-500 text-center mb-10 text-sm">Verktøyene Bygghjerne er bygget på</p>
+          <p className="text-slate-500 text-center mb-10 text-sm">Verktøyene Serv24 er bygget på</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {stack.map((s) => (
@@ -235,7 +235,7 @@ export default function Teknologi() {
 
       <footer className="py-8 text-center text-sm text-slate-400 border-t border-slate-100">
         <div className="flex items-center justify-center gap-6">
-          <span>© 2026 Bygghjerne</span>
+          <span>© 2026 Serv24</span>
           <Link href="/om-oss" className="hover:text-slate-600 transition-colors">Om oss</Link>
           <Link href="/teknologi" className="hover:text-slate-600 transition-colors">Teknologi</Link>
         </div>

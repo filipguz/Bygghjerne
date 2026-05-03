@@ -51,7 +51,7 @@ export default function Landing() {
               </svg>
             </div>
             <h3 className="font-semibold text-slate-800">Last opp PDF</h3>
-            <p className="text-sm text-slate-500">Driftshåndbøker, servicerapporter og tegninger — Bygghjerne leser og forstår dem.</p>
+            <p className="text-sm text-slate-500">Driftshåndbøker, servicerapporter og tegninger — Serv24 leser og forstår dem.</p>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -80,7 +80,7 @@ export default function Landing() {
 
       <footer className="py-8 text-center text-sm text-slate-400 border-t border-slate-100">
         <div className="flex items-center justify-center gap-6">
-          <span>© 2026 Bygghjerne</span>
+          <span>© 2026 Serv24</span>
           <Link href="/om-oss" className="hover:text-slate-600 transition-colors">Om oss</Link>
           <Link href="/teknologi" className="hover:text-slate-600 transition-colors">Teknologi</Link>
         </div>

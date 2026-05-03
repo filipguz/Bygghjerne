@@ -12,7 +12,7 @@ export default function PublicNav({ active }: { active?: "om-oss" | "teknologi" 
     <nav className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto w-full">
       <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
         <BuildingIcon />
-        <span className="font-bold text-brand-900 text-lg">Bygghjerne</span>
+        <span className="font-bold text-brand-900 text-lg">Serv24</span>
       </Link>
 
       <div className="flex items-center gap-6">

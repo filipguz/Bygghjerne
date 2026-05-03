@@ -13,7 +13,7 @@ from supabase import create_client
 
 load_dotenv()
 
-app = FastAPI(title="Bygghjerne API")
+app = FastAPI(title="Serv24 API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -353,7 +353,7 @@ def chat(request: ChatRequest, user=Depends(get_current_user)):
         model=CHAT_MODEL,
         max_tokens=1024,
         system=(
-            "Du er Bygghjerne, en AI-driftsassistent for bygget. "
+            "Du er Serv24, en AI-driftsassistent for bygget. "
             "Svar alltid på norsk og bruk informasjonen fra den gitte konteksten til å svare på spørsmål om bygget, "
             "tekniske installasjoner, drift og vedlikehold. "
             "Hvis svaret ikke finnes i konteksten, si det tydelig. "

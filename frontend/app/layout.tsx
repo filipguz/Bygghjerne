@@ -3,7 +3,7 @@ import "./globals.css";
 import { BuildingProvider } from "@/utils/building-context";
 
 export const metadata: Metadata = {
-  title: "Bygghjerne",
+  title: "Serv24",
   description: "AI-driftsassistent for bygget",
 };
 

@@ -120,6 +120,46 @@ def get_my_org(user=Depends(get_current_user)):
     return _get_user_org(user.id)
 
 
+class UpdateOrgRequest(BaseModel):
+    name: str
+
+
+@app.patch("/orgs/me")
+def update_org(body: UpdateOrgRequest, user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Ingen organisasjon funnet.")
+    if org["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Kun admins kan redigere organisasjonen.")
+    result = supabase_client.table("orgs").update({"name": body.name}).eq("id", org["id"]).execute()
+    return result.data[0]
+
+
+@app.get("/orgs/members")
+def list_org_members(user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Ingen organisasjon funnet.")
+    members = supabase_client.table("org_members").select(
+        "user_id, role, created_at"
+    ).eq("org_id", org["id"]).order("created_at").execute().data or []
+    result = []
+    for m in members:
+        try:
+            u = supabase_client.auth.admin.get_user_by_id(m["user_id"])
+            email = u.user.email if u.user else "Ukjent"
+        except Exception:
+            email = "Ukjent"
+        result.append({
+            "user_id": m["user_id"],
+            "email": email,
+            "role": m["role"],
+            "joined_at": m["created_at"],
+            "is_me": m["user_id"] == user.id,
+        })
+    return result
+
+
 # ─── Buildings ────────────────────────────────────────────────────────────────
 
 class CreateBuildingRequest(BaseModel):

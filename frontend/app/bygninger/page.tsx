@@ -55,7 +55,7 @@ export default function Bygninger() {
 
   function selectBuilding(building: Building) {
     setBuilding(building.id, building.name);
-    router.push("/assistent");
+    router.push("/dashboard");
   }
 
   async function handleCreate(e: React.FormEvent) {

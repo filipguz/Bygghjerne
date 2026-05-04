@@ -121,3 +121,120 @@ as $$
   order by similarity desc
   limit match_count;
 $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CMMS MIGRATION — run once after initial schema
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ─── Assets ───────────────────────────────────────────────────────────────────
+
+create table if not exists assets (
+  id uuid primary key default gen_random_uuid(),
+  building_id uuid not null references buildings(id) on delete cascade,
+  name text not null,
+  category text not null default 'other'
+    check (category in ('hvac', 'fire_safety', 'electrical', 'plumbing', 'elevator', 'other')),
+  location_floor text,
+  location_room text,
+  installation_date date,
+  maintenance_interval_days int,
+  last_maintenance_date date,
+  metadata jsonb not null default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ─── Work Orders ──────────────────────────────────────────────────────────────
+
+create table if not exists work_orders (
+  id uuid primary key default gen_random_uuid(),
+  building_id uuid not null references buildings(id) on delete cascade,
+  asset_id uuid references assets(id) on delete set null,
+  title text not null,
+  description text,
+  status text not null default 'open'
+    check (status in ('open', 'in_progress', 'waiting', 'completed')),
+  priority text not null default 'medium'
+    check (priority in ('low', 'medium', 'high', 'critical')),
+  due_date date,
+  completed_at timestamptz,
+  created_by uuid references auth.users(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists work_orders_building_status_idx
+  on work_orders(building_id, status);
+
+create index if not exists work_orders_due_date_idx
+  on work_orders(due_date) where status != 'completed';
+
+-- ─── Activity Log (append-only) ───────────────────────────────────────────────
+
+create table if not exists activity_log (
+  id uuid primary key default gen_random_uuid(),
+  building_id uuid not null references buildings(id) on delete cascade,
+  asset_id uuid references assets(id) on delete set null,
+  work_order_id uuid references work_orders(id) on delete set null,
+  user_id uuid references auth.users(id),
+  action text not null,
+  details jsonb not null default '{}',
+  created_at timestamptz default now()
+);
+
+-- ─── RLS (backend-only access via service role) ───────────────────────────────
+
+alter table assets enable row level security;
+create policy "deny direct client access to assets"
+  on assets for all using (false);
+
+alter table work_orders enable row level security;
+create policy "deny direct client access to work_orders"
+  on work_orders for all using (false);
+
+alter table activity_log enable row level security;
+create policy "deny direct client access to activity_log"
+  on activity_log for all using (false);
+
+-- ─── RPC: upcoming maintenance ────────────────────────────────────────────────
+
+create or replace function get_upcoming_maintenance(
+  p_building_id uuid,
+  p_days_ahead int default 90
+)
+returns table(
+  id uuid,
+  name text,
+  category text,
+  location_floor text,
+  location_room text,
+  last_maintenance_date date,
+  maintenance_interval_days int,
+  next_maintenance_date date,
+  days_until_due int
+)
+language sql stable
+as $$
+  select
+    id, name, category, location_floor, location_room,
+    last_maintenance_date,
+    maintenance_interval_days,
+    (
+      coalesce(last_maintenance_date, installation_date, current_date)
+      + (maintenance_interval_days || ' days')::interval
+    )::date as next_maintenance_date,
+    (
+      (
+        coalesce(last_maintenance_date, installation_date, current_date)
+        + (maintenance_interval_days || ' days')::interval
+      )::date - current_date
+    )::int as days_until_due
+  from assets
+  where building_id = p_building_id
+    and maintenance_interval_days is not null
+    and (
+      coalesce(last_maintenance_date, installation_date, current_date)
+      + (maintenance_interval_days || ' days')::interval
+    )::date <= current_date + (p_days_ahead || ' days')::interval
+  order by next_maintenance_date asc;
+$$;

@@ -1,13 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { apiFetch } from "@/utils/api";
 
-export default function Login() {
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-sm text-slate-400">Laster…</p>
+      </div>
+    }>
+      <Login />
+    </Suspense>
+  );
+}
+
+function Login() {
   const router = useRouter();
+  const params = useSearchParams();
+  const next = params.get("next");
 
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -29,14 +43,25 @@ export default function Login() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           setError("Feil e-post eller passord.");
+          return;
+        }
+        if (next) {
+          router.push(next);
         } else {
           const orgRes = await apiFetch("/orgs/me");
           const org = orgRes.ok ? await orgRes.json() : null;
           router.push(org ? "/bygninger" : "/onboarding");
-          router.refresh();
         }
+        router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const redirectTo = next
+          ? `${window.location.origin}${next}`
+          : `${window.location.origin}/bygninger`;
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: redirectTo },
+        });
         if (error) {
           setError(error.message);
         } else {
@@ -87,6 +112,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="deg@eksempel.no"
+                autoComplete="email"
               />
             </div>
             <div>
@@ -99,6 +125,7 @@ export default function Login() {
                 className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Minst 6 tegn"
                 minLength={6}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
             </div>
 
@@ -114,7 +141,7 @@ export default function Login() {
               disabled={loading}
               className="bg-brand-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-60"
             >
-              {loading ? "Venter..." : mode === "login" ? "Logg inn" : "Opprett konto"}
+              {loading ? "Venter…" : mode === "login" ? "Logg inn" : "Opprett konto"}
             </button>
           </form>
         </div>

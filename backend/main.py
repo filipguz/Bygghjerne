@@ -633,17 +633,18 @@ def get_activity_log(building_id: str, limit: int = 50, user=Depends(get_current
 # AI Tool Layer — enhanced chat with structured data access
 # ═══════════════════════════════════════════════════════════════════════════════
 
-CMMS_SYSTEM_PROMPT = """Du er Serv24, en AI-driftsassistent for bygningsforvaltning.
+CMMS_SYSTEM_PROMPT = """Du er Serv24, en AI-driftsassistent for bygningsforvaltning med langsiktig bygningshukommelse.
 
-Du har tilgang til verktøy for å hente sanntidsdata om byggets eiendeler, arbeidsordre og dokumenter.
+Du har tilgang til verktøy for å hente sanntidsdata om eiendeler, arbeidsordre, inspeksjonshistorikk og dokumenter.
 
 Regler:
 - Svar alltid på norsk
 - Vær konkret og handlingsorientert — gi tydelige prioriteringer og anbefalinger
-- Henvis til spesifikke arbeidsordre-titler, eiendelsnavn og dokumenter når relevant
+- Henvis til spesifikke arbeidsordre, eiendelsnavn og rapporter når relevant
 - Når du oppretter en arbeidsordre, bekreft alltid hva du opprettet (tittel og prioritet)
 - Prioriter alltid kritiske og forfalne oppgaver
-- Kombiner data fra arbeidsordre OG dokumenter når det gir bedre svar"""
+- Bruk inspeksjonshistorikk til å identifisere mønstre: gjentakende problemer, degradering over tid
+- Kombiner data fra arbeidsordre, rapporter OG dokumenter for å gi helhetlige anbefalinger"""
 
 CMMS_TOOLS = [
     {
@@ -821,6 +822,12 @@ def _execute_tool(name: str, inputs: dict, building_id: str, user_id: str) -> di
     if name == "search_documents":
         docs = _tool_search_documents(inputs["query"], building_id)
         return {"results": docs}
+    if name == "get_inspection_history":
+        return {"reports": _tool_get_inspection_history(inputs["asset_id"], inputs.get("limit", 10))}
+    if name == "get_building_health_overview":
+        return {"assets": _tool_get_building_health_overview(building_id)}
+    if name == "detect_asset_patterns":
+        return _analyze_patterns(inputs["asset_id"])
     return {"error": f"Ukjent verktøy: {name}"}
 
 
@@ -885,3 +892,314 @@ def chat_with_tools(question: str, building_id: str, user_id: str) -> dict:
         "tools_used": tools_used,
         "actions_taken": actions_taken,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SELF-LEARNING INTELLIGENCE — Inspection Reports, Condition Trends, Patterns
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Inspection Reports ───────────────────────────────────────────────────────
+
+class CreateInspectionReportRequest(BaseModel):
+    building_id: str
+    asset_id: str | None = None
+    report_type: str = "service"
+    performed_by: str
+    report_date: str | None = None
+    condition_score: int
+    observed_issues: str | None = None
+    actions_taken: str | None = None
+    recommended_actions: str | None = None
+    next_inspection_date: str | None = None
+
+
+class UpdateInspectionReportRequest(BaseModel):
+    report_type: str | None = None
+    performed_by: str | None = None
+    report_date: str | None = None
+    condition_score: int | None = None
+    observed_issues: str | None = None
+    actions_taken: str | None = None
+    recommended_actions: str | None = None
+    next_inspection_date: str | None = None
+
+
+@app.get("/inspection-reports")
+def list_inspection_reports(
+    building_id: str,
+    asset_id: str | None = None,
+    limit: int = 50,
+    user=Depends(get_current_user),
+):
+    assert_user_owns_building(user.id, building_id)
+    q = (supabase_client.table("inspection_reports")
+         .select("*, assets(name, category)")
+         .eq("building_id", building_id)
+         .order("report_date", desc=True)
+         .limit(limit))
+    if asset_id:
+        q = q.eq("asset_id", asset_id)
+    return q.execute().data or []
+
+
+@app.post("/inspection-reports")
+def create_inspection_report(body: CreateInspectionReportRequest, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, body.building_id)
+    data = {k: v for k, v in body.model_dump().items() if v is not None}
+    data.setdefault("report_date", date.today().isoformat())
+    data["performed_by_user_id"] = user.id
+    report = supabase_client.table("inspection_reports").insert(data).execute().data[0]
+    if body.asset_id and body.report_type in ("service", "annual_inspection", "routine_check"):
+        supabase_client.table("assets").update({
+            "last_maintenance_date": data["report_date"],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", body.asset_id).execute()
+    log_activity(body.building_id, "inspection_report_created",
+                 {"report_type": body.report_type, "condition_score": body.condition_score},
+                 user_id=user.id, asset_id=body.asset_id)
+    return report
+
+
+@app.get("/inspection-reports/{report_id}")
+def get_inspection_report(report_id: str, building_id: str, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, building_id)
+    result = supabase_client.table("inspection_reports").select(
+        "*, assets(name, category, location_floor, location_room)"
+    ).eq("id", report_id).eq("building_id", building_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Rapport ikke funnet.")
+    return result.data[0]
+
+
+@app.patch("/inspection-reports/{report_id}")
+def update_inspection_report(
+    report_id: str,
+    building_id: str,
+    body: UpdateInspectionReportRequest,
+    user=Depends(get_current_user),
+):
+    assert_user_owns_building(user.id, building_id)
+    data = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="Ingen felt å oppdatere.")
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = supabase_client.table("inspection_reports").update(data).eq("id", report_id).eq("building_id", building_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Rapport ikke funnet.")
+    return result.data[0]
+
+
+@app.delete("/inspection-reports/{report_id}")
+def delete_inspection_report(report_id: str, building_id: str, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, building_id)
+    supabase_client.table("inspection_reports").delete().eq("id", report_id).eq("building_id", building_id).execute()
+    return {"ok": True}
+
+
+# ─── Condition trend & pattern analysis ──────────────────────────────────────
+
+@app.get("/assets/{asset_id}/condition-trend")
+def get_asset_condition_trend(asset_id: str, building_id: str, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, building_id)
+    asset = supabase_client.table("assets").select("id, name").eq("id", asset_id).eq("building_id", building_id).execute()
+    if not asset.data:
+        raise HTTPException(status_code=404, detail="Eiendel ikke funnet.")
+    trend = supabase_client.rpc("get_condition_trend", {"p_asset_id": asset_id}).execute().data or []
+    return {"asset_id": asset_id, "trend": trend}
+
+
+def _analyze_patterns(asset_id: str) -> dict:
+    reports = (supabase_client.table("inspection_reports")
+               .select("report_date, condition_score, report_type, observed_issues")
+               .eq("asset_id", asset_id)
+               .order("report_date", desc=True)
+               .limit(24)
+               .execute().data or [])
+
+    if not reports:
+        return {"patterns": [], "risk_level": "unknown", "report_count": 0}
+
+    patterns = []
+    scores = [r["condition_score"] for r in reports]
+
+    if len(scores) >= 3 and all(scores[i] <= scores[i + 1] for i in range(min(4, len(scores) - 1))):
+        patterns.append({
+            "type": "degradation_trend", "severity": "warning",
+            "message": f"Tilstand har forverret seg jevnt de siste {min(len(scores), 5)} rapportene",
+        })
+
+    if scores[0] <= 2:
+        patterns.append({
+            "type": "critical_condition", "severity": "critical",
+            "message": f"Kritisk tilstand (score {scores[0]}/5) — umiddelbar handling anbefalt",
+        })
+    elif scores[0] == 3:
+        patterns.append({
+            "type": "poor_condition", "severity": "warning",
+            "message": f"Redusert tilstand (score {scores[0]}/5) — vurder tiltak",
+        })
+
+    issues_with_text = [r for r in reports if r.get("observed_issues")]
+    if len(issues_with_text) >= 3:
+        patterns.append({
+            "type": "recurring_issues", "severity": "info",
+            "message": f"Problemer rapportert i {len(issues_with_text)} av {len(reports)} inspeksjoner",
+        })
+
+    try:
+        days_since = (date.today() - date.fromisoformat(reports[0]["report_date"])).days
+        if days_since > 365:
+            patterns.append({
+                "type": "overdue_inspection", "severity": "warning",
+                "message": f"Ingen inspeksjon på {days_since} dager",
+            })
+    except Exception:
+        pass
+
+    risk_level = (
+        "critical" if any(p["severity"] == "critical" for p in patterns)
+        else "warning" if any(p["severity"] == "warning" for p in patterns)
+        else "ok" if patterns else "unknown"
+    )
+
+    return {
+        "patterns": patterns,
+        "risk_level": risk_level,
+        "report_count": len(reports),
+        "latest_score": scores[0],
+        "average_score": round(sum(scores) / len(scores), 1),
+    }
+
+
+@app.get("/assets/{asset_id}/pattern-analysis")
+def get_asset_pattern_analysis(asset_id: str, building_id: str, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, building_id)
+    asset = supabase_client.table("assets").select("id, name, category").eq("id", asset_id).eq("building_id", building_id).execute()
+    if not asset.data:
+        raise HTTPException(status_code=404, detail="Eiendel ikke funnet.")
+    return {"asset": asset.data[0], **_analyze_patterns(asset_id)}
+
+
+# ─── AI-generated report form ─────────────────────────────────────────────────
+
+class GenerateReportFormRequest(BaseModel):
+    building_id: str
+    asset_id: str
+    work_order_id: str | None = None
+
+
+@app.post("/reports/generate-form")
+def generate_report_form(body: GenerateReportFormRequest, user=Depends(get_current_user)):
+    assert_user_owns_building(user.id, body.building_id)
+
+    asset = supabase_client.table("assets").select("*").eq("id", body.asset_id).execute()
+    if not asset.data:
+        raise HTTPException(status_code=404, detail="Eiendel ikke funnet.")
+    asset_data = asset.data[0]
+
+    recent_reports = (supabase_client.table("inspection_reports")
+                      .select("report_date, condition_score, observed_issues, actions_taken, recommended_actions, report_type")
+                      .eq("asset_id", body.asset_id)
+                      .order("report_date", desc=True)
+                      .limit(3)
+                      .execute().data or [])
+
+    work_order = None
+    if body.work_order_id:
+        wo = supabase_client.table("work_orders").select("title, description, priority").eq("id", body.work_order_id).execute()
+        work_order = wo.data[0] if wo.data else None
+
+    context = (
+        f"Eiendel: {asset_data['name']} ({asset_data['category']})\n"
+        f"Plassering: Etasje {asset_data.get('location_floor', '-')}, Rom {asset_data.get('location_room', '-')}\n"
+        f"Siste vedlikehold: {asset_data.get('last_maintenance_date', 'ukjent')}\n\n"
+        f"Tidligere rapporter:\n{json.dumps(recent_reports, ensure_ascii=False, default=str) if recent_reports else 'Ingen'}"
+    )
+    if work_order:
+        context += f"\n\nFerdigstilt arbeidsordre:\n{json.dumps(work_order, ensure_ascii=False)}"
+
+    prompt = (
+        "Basert på eiendelshistorikken, fyll ut et forslag til inspeksjonsrapport for en tekniker.\n"
+        "Returner gyldig JSON med feltene: observed_issues (string), actions_taken (string), "
+        "recommended_actions (string), condition_score (int 1-5), next_inspection_date (YYYY-MM-DD).\n"
+        "Svar KUN med JSON.\n\n" + context
+    )
+
+    response = anthropic_client.messages.create(
+        model=CHAT_MODEL, max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    try:
+        text = response.content[0].text.strip()
+        if "```" in text:
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        suggested = json.loads(text.strip())
+    except Exception:
+        suggested = {}
+
+    return {"suggested": suggested, "asset": asset_data}
+
+
+# ─── New AI tools for intelligence layer ─────────────────────────────────────
+
+CMMS_TOOLS.extend([
+    {
+        "name": "get_inspection_history",
+        "description": "Hent inspeksjonsrapporter og tilstandshistorikk for et spesifikt utstyr.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "asset_id": {"type": "string", "description": "Utstyrets UUID"},
+                "limit": {"type": "integer", "description": "Antall rapporter (standard 10)"},
+            },
+            "required": ["asset_id"],
+        },
+    },
+    {
+        "name": "get_building_health_overview",
+        "description": "Hent helseindeks for alle eiendeler i bygget basert på siste inspeksjonsrapport.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "detect_asset_patterns",
+        "description": "Analyser mønster og trender for et utstyr — oppdager gjentakende problemer og degradering.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "asset_id": {"type": "string", "description": "Utstyrets UUID"},
+            },
+            "required": ["asset_id"],
+        },
+    },
+])
+
+
+def _tool_get_inspection_history(asset_id: str, limit: int = 10) -> list:
+    return (supabase_client.table("inspection_reports")
+            .select("report_date, condition_score, report_type, performed_by, observed_issues, actions_taken, recommended_actions")
+            .eq("asset_id", asset_id)
+            .order("report_date", desc=True)
+            .limit(limit)
+            .execute().data or [])
+
+
+def _tool_get_building_health_overview(building_id: str) -> list:
+    assets = supabase_client.table("assets").select("id, name, category").eq("building_id", building_id).execute().data or []
+    result = []
+    for a in assets:
+        latest = (supabase_client.table("inspection_reports")
+                  .select("report_date, condition_score")
+                  .eq("asset_id", a["id"])
+                  .order("report_date", desc=True)
+                  .limit(1)
+                  .execute().data or [])
+        result.append({
+            "id": a["id"], "name": a["name"], "category": a["category"],
+            "latest_condition_score": latest[0]["condition_score"] if latest else None,
+            "latest_report_date": latest[0]["report_date"] if latest else None,
+        })
+    result.sort(key=lambda x: (x["latest_condition_score"] or 99))
+    return result

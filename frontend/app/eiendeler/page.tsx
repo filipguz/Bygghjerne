@@ -230,6 +230,165 @@ function AssetFormModal({
   );
 }
 
+interface TrendPoint {
+  report_date: string;
+  condition_score: number;
+  report_type: string;
+  performed_by: string;
+  observed_issues: string | null;
+  recommended_actions: string | null;
+}
+
+interface Pattern {
+  type: string;
+  severity: "critical" | "warning" | "info";
+  message: string;
+}
+
+interface PatternAnalysis {
+  patterns: Pattern[];
+  risk_level: string;
+  report_count: number;
+  latest_score?: number;
+  average_score?: number;
+}
+
+function ConditionDots({ score }: { score: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className={`h-1.5 w-1.5 rounded-full ${
+          i <= score
+            ? score >= 4 ? "bg-green-500" : score === 3 ? "bg-yellow-500" : "bg-red-500"
+            : "bg-slate-200"
+        }`} />
+      ))}
+    </div>
+  );
+}
+
+function ConditionSparkline({ trend }: { trend: TrendPoint[] }) {
+  if (trend.length < 2) return null;
+  const sorted = [...trend].reverse();
+  const W = 180, H = 48, PAD = 6;
+  const xStep = (W - PAD * 2) / (sorted.length - 1);
+  const yOf = (s: number) => H - PAD - ((s - 1) / 4) * (H - PAD * 2);
+  const pts = sorted.map((p, i) => ({ x: PAD + i * xStep, y: yOf(p.condition_score), score: p.condition_score }));
+  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const dotColor = (s: number) => s >= 4 ? "#22c55e" : s === 3 ? "#f59e0b" : "#ef4444";
+  return (
+    <svg width={W} height={H} className="w-full">
+      <path d={pathD} fill="none" stroke="#cbd5e1" strokeWidth={1.5} strokeLinejoin="round" />
+      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill={dotColor(p.score)} />)}
+    </svg>
+  );
+}
+
+function AssetHealthPanel({
+  asset, buildingId, onClose,
+}: { asset: Asset; buildingId: string; onClose: () => void }) {
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [analysis, setAnalysis] = useState<PatternAnalysis | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const [tRes, aRes] = await Promise.all([
+          apiFetch(`/assets/${asset.id}/condition-trend?building_id=${buildingId}`),
+          apiFetch(`/assets/${asset.id}/pattern-analysis?building_id=${buildingId}`),
+        ]);
+        if (tRes.ok) { const d = await tRes.json(); setTrend(d.trend || []); }
+        if (aRes.ok) setAnalysis(await aRes.json());
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [asset.id, buildingId]);
+
+  const severityStyle = (sev: string) =>
+    sev === "critical" ? "bg-red-50 border-red-200 text-red-700"
+    : sev === "warning" ? "bg-amber-50 border-amber-200 text-amber-700"
+    : "bg-blue-50 border-blue-200 text-blue-700";
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl flex flex-col gap-4 p-6 max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">{asset.name}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Tilstandsanalyse</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <svg className="h-6 w-6 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+          </div>
+        ) : (
+          <>
+            {analysis && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Siste score</p>
+                  <p className={`text-xl font-bold ${analysis.latest_score != null && analysis.latest_score <= 2 ? "text-red-600" : analysis.latest_score === 3 ? "text-yellow-600" : "text-green-600"}`}>
+                    {analysis.latest_score ?? "—"}<span className="text-sm font-normal text-slate-400">/5</span>
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Snitt</p>
+                  <p className="text-xl font-bold text-slate-700">
+                    {analysis.average_score ?? "—"}<span className="text-sm font-normal text-slate-400">/5</span>
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Rapporter</p>
+                  <p className="text-xl font-bold text-slate-700">{analysis.report_count}</p>
+                </div>
+              </div>
+            )}
+            {trend.length >= 2 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-2">Tilstandstrend</p>
+                <ConditionSparkline trend={trend} />
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-slate-400">{trend[trend.length - 1]?.report_date}</p>
+                  <p className="text-xs text-slate-400">{trend[0]?.report_date}</p>
+                </div>
+              </div>
+            )}
+            {analysis && analysis.patterns.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium text-slate-500">Mønstre oppdaget</p>
+                {analysis.patterns.map((p, i) => (
+                  <div key={i} className={`text-xs px-3 py-2 rounded-lg border ${severityStyle(p.severity)}`}>{p.message}</div>
+                ))}
+              </div>
+            )}
+            {analysis && analysis.patterns.length === 0 && analysis.report_count > 0 && (
+              <div className="text-xs px-3 py-2 rounded-lg border bg-green-50 border-green-200 text-green-700">
+                Ingen bekymringsfulle mønstre oppdaget
+              </div>
+            )}
+            {(!analysis || analysis.report_count === 0) && (
+              <p className="text-sm text-slate-400 text-center py-4">Ingen inspeksjonsrapporter ennå</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Eiendeler() {
   const { buildingId } = useBuilding();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -239,6 +398,7 @@ export default function Eiendeler() {
   const [editing, setEditing] = useState<Asset | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [healthAsset, setHealthAsset] = useState<Asset | null>(null);
 
   async function load() {
     if (!buildingId) return;
@@ -334,6 +494,15 @@ export default function Eiendeler() {
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <button
+                          onClick={() => setHealthAsset(asset)}
+                          className="p-1 rounded text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                          title="Tilstandsanalyse">
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => { setEditing(asset); setShowForm(true); }}
                           className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                           title="Rediger">
@@ -398,6 +567,14 @@ export default function Eiendeler() {
           existing={editing}
           onClose={() => { setShowForm(false); setEditing(null); }}
           onSaved={load}
+        />
+      )}
+
+      {healthAsset && buildingId && (
+        <AssetHealthPanel
+          asset={healthAsset}
+          buildingId={buildingId}
+          onClose={() => setHealthAsset(null)}
         />
       )}
     </AppShell>

@@ -226,7 +226,7 @@ function AiPanel({ buildingId, onClose }: { buildingId: string; onClose: () => v
   }
 
   return (
-    <div className="w-80 shrink-0 flex flex-col bg-white border-l border-slate-200 h-full">
+    <div className="fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full md:w-80 md:shrink-0 flex flex-col bg-white md:border-l border-slate-200 md:h-full shadow-xl md:shadow-none">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
@@ -381,25 +381,26 @@ export default function Dashboard() {
         {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-auto">
           {/* Page header */}
-          <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 shrink-0">
-            <h1 className="text-lg font-bold text-slate-900">Oversikt</h1>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-white border-b border-slate-200 shrink-0">
+            <h1 className="text-base md:text-lg font-bold text-slate-900">Oversikt</h1>
+            <div className="flex items-center gap-1.5 md:gap-2">
               <button
                 onClick={() => setShowWO(true)}
-                className="flex items-center gap-1.5 bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+                className="flex items-center gap-1 md:gap-1.5 bg-brand-600 text-white px-2.5 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium hover:bg-brand-700 transition-colors"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Arbeidsordre
+                <span className="hidden sm:inline">Arbeidsordre</span>
+                <span className="sm:hidden">Ordre</span>
               </button>
               <Link href="/eiendeler"
-                className="flex items-center gap-1.5 border border-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                className="hidden sm:flex items-center gap-1.5 border border-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
                 + Eiendel
               </Link>
               <button
                 onClick={() => setShowAI((v) => !v)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 md:gap-1.5 px-2.5 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
                   showAI ? "bg-brand-50 text-brand-700 border border-brand-200" : "border border-slate-300 text-slate-700 hover:bg-slate-50"
                 }`}
               >
@@ -412,30 +413,30 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex-1 px-6 py-6 flex flex-col gap-6">
+          <div className="flex-1 px-3 md:px-6 py-4 md:py-6 flex flex-col gap-4 md:gap-6">
             {/* KPI cards */}
             {loading ? (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 h-24 animate-pulse" />
+                  <div key={i} className="bg-white border border-slate-200 rounded-xl md:rounded-2xl p-3 md:p-5 h-20 md:h-24 animate-pulse" />
                 ))}
               </div>
             ) : data && (
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Eiendeler</p>
-                  <p className="text-3xl font-bold text-slate-900">{data.kpis.total_assets}</p>
-                  <p className="text-xs text-slate-400 mt-1">registrerte enheter</p>
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="bg-white border border-slate-200 rounded-xl md:rounded-2xl p-3 md:p-5">
+                  <p className="text-[10px] md:text-xs text-slate-400 font-medium uppercase tracking-wide mb-1 md:mb-2">Eiendeler</p>
+                  <p className="text-2xl md:text-3xl font-bold text-slate-900">{data.kpis.total_assets}</p>
+                  <p className="text-[10px] md:text-xs text-slate-400 mt-0.5 md:mt-1 hidden sm:block">registrerte enheter</p>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Åpne ordrer</p>
-                  <p className="text-3xl font-bold text-slate-900">{data.kpis.open_work_orders}</p>
-                  <p className="text-xs text-slate-400 mt-1">aktive arbeidsordre</p>
+                <div className="bg-white border border-slate-200 rounded-xl md:rounded-2xl p-3 md:p-5">
+                  <p className="text-[10px] md:text-xs text-slate-400 font-medium uppercase tracking-wide mb-1 md:mb-2">Åpne</p>
+                  <p className="text-2xl md:text-3xl font-bold text-slate-900">{data.kpis.open_work_orders}</p>
+                  <p className="text-[10px] md:text-xs text-slate-400 mt-0.5 md:mt-1 hidden sm:block">aktive arbeidsordre</p>
                 </div>
-                <div className={`border rounded-2xl p-5 ${data.kpis.overdue_maintenance > 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-200"}`}>
-                  <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${data.kpis.overdue_maintenance > 0 ? "text-red-400" : "text-slate-400"}`}>Forfalt</p>
-                  <p className={`text-3xl font-bold ${data.kpis.overdue_maintenance > 0 ? "text-red-600" : "text-slate-900"}`}>{data.kpis.overdue_maintenance}</p>
-                  <p className={`text-xs mt-1 ${data.kpis.overdue_maintenance > 0 ? "text-red-400" : "text-slate-400"}`}>forfalt vedlikehold</p>
+                <div className={`border rounded-xl md:rounded-2xl p-3 md:p-5 ${data.kpis.overdue_maintenance > 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-200"}`}>
+                  <p className={`text-[10px] md:text-xs font-medium uppercase tracking-wide mb-1 md:mb-2 ${data.kpis.overdue_maintenance > 0 ? "text-red-400" : "text-slate-400"}`}>Forfalt</p>
+                  <p className={`text-2xl md:text-3xl font-bold ${data.kpis.overdue_maintenance > 0 ? "text-red-600" : "text-slate-900"}`}>{data.kpis.overdue_maintenance}</p>
+                  <p className={`text-[10px] md:text-xs mt-0.5 md:mt-1 hidden sm:block ${data.kpis.overdue_maintenance > 0 ? "text-red-400" : "text-slate-400"}`}>forfalt vedlikehold</p>
                 </div>
               </div>
             )}

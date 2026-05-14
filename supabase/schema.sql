@@ -292,3 +292,102 @@ as $$
   order by report_date desc
   limit p_limit;
 $$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PROJECTS MIGRATION — Vizbo merge
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+create table if not exists projects (
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null,
+  location         text,
+  address          text,
+  status           text default 'mulighetsstudie',
+  bra_m2           int,
+  units            int,
+  floors           int,
+  lat              float,
+  lng              float,
+  description      text,
+  completion_year  int,
+  investment_mnok  float,
+  zoning_status    text,
+  zoning_code      text,
+  analysis         jsonb,
+  created_at       timestamptz default now()
+);
+
+alter table documents add column if not exists project_id uuid references projects(id);
+alter table document_chunks add column if not exists project_id uuid references projects(id);
+
+-- Replace match_chunks to support both building_id and project_id filters
+create or replace function match_chunks(
+  query_embedding  vector(1024),
+  match_threshold  float,
+  match_count      int,
+  p_building_id    uuid default null,
+  p_project_id     uuid default null
+)
+returns table(
+  id           uuid,
+  document_id  uuid,
+  content      text,
+  filename     text,
+  similarity   float
+)
+language sql stable
+as $$
+  select
+    dc.id,
+    dc.document_id,
+    dc.content,
+    d.filename,
+    1 - (dc.embedding <=> query_embedding) as similarity
+  from document_chunks dc
+  join documents d on d.id = dc.document_id
+  where (
+    (p_building_id is not null and d.building_id = p_building_id) or
+    (p_project_id  is not null and d.project_id  = p_project_id)
+  )
+    and 1 - (dc.embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+$$;
+
+-- Seed projects
+insert into projects (name, location, address, status, bra_m2, units, floors, lat, lng, description, completion_year, investment_mnok, zoning_status, zoning_code, analysis)
+values
+  (
+    'Storgata 12', 'Oslo', 'Storgata 12, 0155 Oslo',
+    'prosjektering', 8400, 72, 9,
+    59.9127, 10.7461,
+    'Transformasjon av kontorbygg til bolig med næring i 1. etasje. Moderne arkitektur med fokus på bærekraft.',
+    2026, 245.0, 'Offentlig ettersyn', 'S-5432',
+    '{"sol": {"score": 82, "label": "Solforhold", "description": "Gode solforhold mot sør og vest."}, "støy": {"score": 55, "label": "Støy", "description": "Noe trafikkstøy fra Storgata."}, "flom": {"score": 90, "label": "Flomrisiko", "description": "Lavt flomrisikoområde."}, "fjernvirkning": {"score": 78, "label": "Fjernvirkning", "description": "Positiv fjernvirkning, god byform."}}'::jsonb
+  ),
+  (
+    'Havneparken Kristiansand', 'Kristiansand', 'Vestre Strandgate 22, 4611 Kristiansand',
+    'regulering', 12600, 110, 7,
+    58.1467, 7.9956,
+    'Transformasjon av havnearealer til blandede boliger og næring. Unikt beliggenhet med sjøutsikt.',
+    2027, 380.0, 'Reguleringsplan', 'KR-2341',
+    '{"sol": {"score": 91, "label": "Solforhold", "description": "Eksepsjonelle solforhold mot sør."}, "støy": {"score": 48, "label": "Støy", "description": "Havneaktivitet gir noe bakgrunnsstøy."}, "flom": {"score": 62, "label": "Flomrisiko", "description": "Moderat risiko ved ekstremvær."}, "fjernvirkning": {"score": 88, "label": "Fjernvirkning", "description": "Ikonisk sjøfront."}}'::jsonb
+  ),
+  (
+    'Torvet Lillestrøm', 'Lillestrøm', 'Torvet 3, 2000 Lillestrøm',
+    'mulighetsstudie', 5200, 44, 6,
+    59.9554, 11.0496,
+    'Sentrumsnær utvikling nær jernbanestasjonen. Attraktivt for pendlere og unge voksne.',
+    2028, 142.0, 'Reguleringsplan', 'LS-1122',
+    '{"sol": {"score": 68, "label": "Solforhold", "description": "Gode solforhold om sommeren."}, "støy": {"score": 42, "label": "Støy", "description": "Jernbanestøy er en utfordring."}, "flom": {"score": 75, "label": "Flomrisiko", "description": "Naumdalselva i nærheten."}, "fjernvirkning": {"score": 72, "label": "Fjernvirkning", "description": "Positiv bidrag til sentrum."}}'::jsonb
+  ),
+  (
+    'Bergenhus Kvartal', 'Bergen', 'Strandkaien 1, 5013 Bergen',
+    'salg', 18900, 165, 11,
+    60.3958, 5.3219,
+    'Prestisjeutbygging i Bergens historiske havnekvarter. Luksus og bærekraft i kombinasjon.',
+    2025, 720.0, 'Vedtatt', 'BG-9981',
+    '{"sol": {"score": 59, "label": "Solforhold", "description": "Fjordene gir noe skyggefulle perioder."}, "støy": {"score": 70, "label": "Støy", "description": "Godt støyskjermet fra havnetrafikk."}, "flom": {"score": 55, "label": "Flomrisiko", "description": "Stormflo er relevant."}, "fjernvirkning": {"score": 95, "label": "Fjernvirkning", "description": "Fremtredende posisjon i bybildet."}}'::jsonb
+  )
+on conflict do nothing;

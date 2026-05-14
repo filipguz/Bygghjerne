@@ -94,6 +94,56 @@ def health():
     return {"status": "ok"}
 
 
+# ─── Projects ─────────────────────────────────────────────────────────────────
+
+class CreateProjectRequest(BaseModel):
+    name: str
+    location: str | None = None
+    address: str | None = None
+    status: str = "mulighetsstudie"
+    bra_m2: int | None = None
+    units: int | None = None
+    floors: int | None = None
+    lat: float | None = None
+    lng: float | None = None
+    description: str | None = None
+    completion_year: int | None = None
+    investment_mnok: float | None = None
+    zoning_status: str | None = None
+    zoning_code: str | None = None
+    analysis: dict | None = None
+
+
+@app.get("/projects")
+def list_projects():
+    result = supabase_client.table("projects").select("*").order("name").execute()
+    projects = result.data or []
+    for p in projects:
+        if p.get("lat") and p.get("lng"):
+            p["coordinates"] = [p["lat"], p["lng"]]
+    return projects
+
+
+@app.post("/projects")
+def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
+    payload = body.model_dump(exclude_none=True)
+    result = supabase_client.table("projects").insert(payload).execute()
+    return result.data[0] if result.data else {}
+
+
+@app.get("/projects/{project_id}")
+def get_project(project_id: str):
+    result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    project = result.data[0]
+    if project.get("lat") and project.get("lng"):
+        project["coordinates"] = [project["lat"], project["lng"]]
+    docs = supabase_client.table("documents").select("id, filename, created_at").eq("project_id", project_id).execute()
+    project["documents"] = docs.data or []
+    return project
+
+
 # ─── Org ──────────────────────────────────────────────────────────────────────
 
 class CreateOrgRequest(BaseModel):
@@ -305,11 +355,15 @@ def delete_document(document_id: str, building_id: str, user=Depends(get_current
 
 @app.post("/upload")
 async def upload_document(
-    building_id: str = Form(...),
+    building_id: str | None = Form(None),
+    project_id: str | None = Form(None),
     file: UploadFile = File(...),
     user=Depends(get_current_user),
 ):
-    assert_user_owns_building(user.id, building_id)
+    if not building_id and not project_id:
+        raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
+    if building_id:
+        assert_user_owns_building(user.id, building_id)
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Kun PDF-filer støttes.")
@@ -325,10 +379,13 @@ async def upload_document(
     if not text:
         raise HTTPException(status_code=422, detail="PDF inneholder ingen lesbar tekst.")
 
-    doc_result = supabase_client.table("documents").insert({
-        "filename": file.filename,
-        "building_id": building_id,
-    }).execute()
+    doc_payload: dict = {"filename": file.filename}
+    if building_id:
+        doc_payload["building_id"] = building_id
+    if project_id:
+        doc_payload["project_id"] = project_id
+
+    doc_result = supabase_client.table("documents").insert(doc_payload).execute()
     document_id = doc_result.data[0]["id"]
 
     chunks = chunk_text(text)
@@ -363,60 +420,71 @@ RAG_SYSTEM_PROMPT = (
 
 
 class ChatRequest(BaseModel):
-    question: str
-    building_id: str
+    question: str | None = None
+    message: str | None = None   # alias used by project chat panel
+    building_id: str | None = None
+    project_id: str | None = None
     mode: str = "simple"  # "simple" = RAG only | "enhanced" = tool-calling
 
 
 @app.post("/chat")
 def chat(request: ChatRequest, user=Depends(get_current_user)):
-    if not request.question.strip():
+    q = (request.question or request.message or "").strip()
+    if not q:
         raise HTTPException(status_code=400, detail="Spørsmål kan ikke være tomt.")
+    if not request.building_id and not request.project_id:
+        raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
 
-    assert_user_owns_building(user.id, request.building_id)
+    if request.building_id:
+        assert_user_owns_building(user.id, request.building_id)
 
-    if request.mode == "enhanced":
-        return chat_with_tools(request.question, request.building_id, user.id)
+    if request.building_id and request.mode == "enhanced":
+        return chat_with_tools(q, request.building_id, user.id)
 
-    # Simple RAG path (existing behaviour)
+    # Simple RAG path
     question_result = voyage_client.embed(
-        [request.question], model=EMBEDDING_MODEL, input_type="query"
+        [q], model=EMBEDDING_MODEL, input_type="query"
     )
     question_embedding = question_result.embeddings[0]
 
-    result = supabase_client.rpc(
-        "match_chunks",
-        {
-            "query_embedding": "[" + ",".join(str(x) for x in question_embedding) + "]",
-            "match_threshold": MATCH_THRESHOLD,
-            "match_count": MATCH_COUNT,
-            "p_building_id": request.building_id,
-        },
-    ).execute()
+    rpc_params: dict = {
+        "query_embedding": "[" + ",".join(str(x) for x in question_embedding) + "]",
+        "match_threshold": MATCH_THRESHOLD,
+        "match_count": MATCH_COUNT,
+    }
+    if request.building_id:
+        rpc_params["p_building_id"] = request.building_id
+    if request.project_id:
+        rpc_params["p_project_id"] = request.project_id
 
+    result = supabase_client.rpc("match_chunks", rpc_params).execute()
     chunks = result.data or []
 
     if not chunks:
         return {
+            "response": "Fant ingen relevante dokumenter for dette spørsmålet. Last opp relevante dokumenter og prøv igjen.",
             "answer": "Fant ingen relevante dokumenter for dette spørsmålet. Last opp relevante dokumenter og prøv igjen.",
             "sources": [],
         }
 
     context = "\n\n---\n\n".join(c["content"] for c in chunks)
+    system_prompt = RAG_SYSTEM_PROMPT
+    if request.project_id:
+        system_prompt = "Du er en AI-assistent for eiendomsutvikling. Svar på norsk basert på dokumentene som er lastet opp for dette prosjektet."
 
-    message = anthropic_client.messages.create(
+    ai_message = anthropic_client.messages.create(
         model=CHAT_MODEL,
         max_tokens=1024,
-        system=RAG_SYSTEM_PROMPT,
+        system=system_prompt,
         messages=[
             {
                 "role": "user",
-                "content": f"Kontekst fra bygningsdokumenter:\n\n{context}\n\nSpørsmål: {request.question}",
+                "content": f"Kontekst fra prosjektdokumenter:\n\n{context}\n\nSpørsmål: {q}",
             }
         ],
     )
 
-    answer = message.content[0].text
+    answer = ai_message.content[0].text
     sources = [
         {
             "filename": c["filename"],
@@ -426,7 +494,7 @@ def chat(request: ChatRequest, user=Depends(get_current_user)):
         }
         for c in chunks
     ]
-    return {"answer": answer, "sources": sources}
+    return {"response": answer, "answer": answer, "sources": sources}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

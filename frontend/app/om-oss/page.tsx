@@ -2,63 +2,55 @@ import Image from "next/image";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 
-const founders = [
-  {
-    name: "Christian Widerø",
-    role: "Grunder",
-    photo: "/profil2.jpeg",
-    bio: "Christian er serviceleder hos Bravida Norge og har i over fire år jobbet tett på drift og vedlikehold av store tekniske anlegg. Han kjenner utfordringene på kroppen — og bygget Bygghjerne for å løse dem.",
-  },
-  {
-    name: "Filip Gustavsen",
-    role: "Med-grunder & Utvikler",
-    photo: "/profil1.jpeg",
-    bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
-  },
-];
+const founder = {
+  name: "Filip Gustavsen",
+  role: "Grunder & Utvikler",
+  photo: "/profil1.jpeg",
+  bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
+};
 
 const roadmap = [
   {
     phase: "Fase 1",
-    title: "MVP — Kunnskap i kjernen",
+    title: "AI-assistent for bygningsdokumenter",
     status: "live",
     items: [
       "Last opp driftsdokumenter som PDF",
       "AI-chat som svarer fra dine egne dokumenter",
-      "Dokumentoversikt med slettefunksjon",
       "Norskspråklig søk og svar",
+      "Kildehenvisninger med relevansgrad",
     ],
   },
   {
     phase: "Fase 2",
-    title: "Brukerkontoer og tilgangsstyring",
-    status: "next",
+    title: "CMMS — Drifts- og vedlikeholdsstyring",
+    status: "live",
     items: [
-      "Innlogging med e-post",
-      "Separate dokumentbaser per organisasjon",
-      "Inviter kolleger til samme bygg",
-      "Rollebasert tilgang (admin / leser)",
+      "Arbeidsordre med status, prioritet og ansvarlig",
+      "Eiendelsregister med tilstandsanalyse og trendvisning",
+      "Tilstandsrapporter og inspeksjonslogs",
+      "Dashbord med KPI-er og aktivitetslogg",
     ],
   },
   {
     phase: "Fase 3",
-    title: "Smarte varsler og flere formater",
-    status: "planned",
+    title: "Prosjektportefølje og kart",
+    status: "live",
     items: [
-      "Støtte for Word og Excel i tillegg til PDF",
-      "Automatiske påminnelser om vedlikeholdsfrister",
-      "Servicerapport-historikk per komponent",
-      "Integrasjon med FDV-systemer",
+      "Porteføljeoversikt med prosjektstatus og nøkkeltall",
+      "Karttvisning av alle prosjekter",
+      "Prosjektdetaljside med analyse (sol, støy, flom, fjernvirkning)",
+      "Dokumentopplasting og AI-chat per prosjekt",
     ],
   },
   {
     phase: "Fase 4",
-    title: "Skalerbar plattform",
+    title: "Integrasjoner og automatisering",
     status: "planned",
     items: [
-      "Mobilvennlig app for driftsrunder",
-      "Flerspråklig støtte",
-      "API for integrasjon mot BMS / SD-anlegg",
+      "Støtte for Word og Excel i tillegg til PDF",
+      "Automatiske påminnelser om vedlikeholdsfrister",
+      "API mot BMS / SD-anlegg og FDV-systemer",
       "Automatisk rapportgenerering",
     ],
   },
@@ -85,35 +77,59 @@ export default function OmOss() {
       <section className="max-w-3xl mx-auto px-6 pt-16 pb-12 text-center">
         <h1 className="text-4xl font-bold text-white mb-4">Ideen bak Bygghjerne</h1>
         <p className="text-lg leading-relaxed mb-4" style={{ color: "rgba(147,183,255,0.75)" }}>
-          Store bygg — svømmehaller, skoler, kommunale bygg — inneholder enorme mengder teknisk kunnskap.
-          Driftshåndbøker, servicerapporter, tegninger og instrukser er spredt over hundrevis av filer,
-          og den viktigste kunnskapen lever ofte bare i hodet på erfarne driftsoperatører.
+          Bygghjerne er en samlet plattform for eiendomsforvaltere og eiendomsutviklere. Du får
+          AI-assistent som svarer fra dine egne dokumenter, et komplett vedlikeholdssystem (CMMS)
+          for arbeidsordre og eiendeler, og en prosjektportefølje med kartvisning og analyseverktøy.
         </p>
         <p className="text-lg leading-relaxed" style={{ color: "rgba(147,183,255,0.75)" }}>
-          Når de slutter, forsvinner kunnskapen med dem. Bygghjerne er bygget for å fikse nettopp det —
-          ved å gjøre all dokumentasjon søkbar og tilgjengelig for hele driftsteamet, på et naturlig norsk språk.
+          Alt på norsk, alt på ett sted — uten å måtte bytte mellom fem forskjellige systemer.
         </p>
       </section>
 
-      {/* Founders */}
+      {/* Feature overview */}
+      <section className="max-w-3xl mx-auto px-6 pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[
+            {
+              icon: "💬",
+              title: "AI-assistent",
+              desc: "Last opp PDF-er og still spørsmål på norsk. Bygghjerne henter svar direkte fra dine egne driftsdokumenter med kildehenvisninger.",
+            },
+            {
+              icon: "🔧",
+              title: "CMMS",
+              desc: "Opprett og følg opp arbeidsordre, registrer eiendeler og tekniske installasjoner, og få tilstandsanalyse med trendvisning.",
+            },
+            {
+              icon: "🗺️",
+              title: "Prosjektportefølje",
+              desc: "Hold oversikt over alle utviklingsprosjekter på ett kart. Analyser sol, støy og flomrisiko, og last opp dokumenter per prosjekt.",
+            },
+          ].map((f) => (
+            <div key={f.title} className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
+              <span className="text-3xl">{f.icon}</span>
+              <p className="font-semibold text-white">{f.title}</p>
+              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Founder */}
       <section className="bg-navy-900 py-16 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-10 text-center">Menneskene bak</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {founders.map((f) => (
-              <div
-                key={f.name}
-                className="bg-white/5 rounded-2xl p-6 border border-white/10 flex flex-col items-center text-center gap-4"
-              >
-                <div className="relative h-28 w-28 rounded-full overflow-hidden border-2 border-white/20">
-                  <Image src={f.photo} alt={f.name} fill className="object-cover" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-lg">{f.name}</p>
-                  <p className="text-sm font-medium text-coral-400">{f.role}</p>
-                </div>
-              </div>
-            ))}
+        <div className="max-w-sm mx-auto text-center">
+          <h2 className="text-2xl font-bold text-white mb-10">Mennesket bak</h2>
+          <div className="bg-white/5 rounded-2xl p-8 border border-white/10 flex flex-col items-center gap-4">
+            <div className="relative h-28 w-28 rounded-full overflow-hidden border-2 border-white/20">
+              <Image src={founder.photo} alt={founder.name} fill className="object-cover" />
+            </div>
+            <div>
+              <p className="font-semibold text-white text-lg">{founder.name}</p>
+              <p className="text-sm font-medium text-coral-400">{founder.role}</p>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {founder.bio}
+            </p>
           </div>
         </div>
       </section>

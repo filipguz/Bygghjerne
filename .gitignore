@@ -43,3 +43,10 @@ desktop.ini
 # IDE
 .idea/
 .vscode/
+
+# Aider
+.aider.chat.history.md
+.aider.input.history
+
+# Vizbo (separate project, not part of Bygghjerne repo)
+Vizbo/

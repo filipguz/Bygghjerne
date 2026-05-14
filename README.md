@@ -1,8 +1,8 @@
 # Bygghjerne
 
-AI-powered building management assistant. Upload PDF documents about your building (manuals, maintenance logs, technical specs) and ask questions in Norwegian.
+AI-drevet driftsassistent og prosjektportefølje for eiendomsforvaltning. Last opp PDF-dokumenter om bygninger og prosjekter, still spørsmål på norsk, og hold oversikt over vedlikehold, arbeidsordre og eiendeler.
 
-## Architecture
+## Arkitektur
 
 ```
 frontend/   Next.js 14 (App Router) + Tailwind CSS
@@ -11,22 +11,22 @@ database    Supabase (PostgreSQL + pgvector)
 AI          Anthropic claude-sonnet-4-6 (chat) + Voyage AI voyage-multilingual-2 (embeddings)
 ```
 
-## Prerequisites
+## Forutsetninger
 
 - Node.js 18+
 - Python 3.11+
-- A [Supabase](https://supabase.com) project
-- An [Anthropic](https://console.anthropic.com) API key
-- A [Voyage AI](https://dash.voyageai.com) API key
+- Et [Supabase](https://supabase.com)-prosjekt
+- En [Anthropic](https://console.anthropic.com) API-nøkkel
+- En [Voyage AI](https://dash.voyageai.com) API-nøkkel
 
 ---
 
-## 1. Supabase setup
+## 1. Supabase-oppsett
 
-1. Open your Supabase project → **SQL Editor**
-2. Paste and run the contents of `supabase/schema.sql`
+1. Åpne Supabase-prosjektet ditt → **SQL Editor**
+2. Lim inn og kjør innholdet i `supabase/schema.sql`
 
-This creates the `documents` and `document_chunks` tables, an IVFFlat index on the embedding column, and the `match_chunks` RPC function.
+Dette oppretter alle tabeller, indekser og `match_chunks` RPC-funksjonen.
 
 ---
 
@@ -35,7 +35,7 @@ This creates the `documents` and `document_chunks` tables, an IVFFlat index on t
 ```bash
 cd backend
 cp .env.example .env
-# Fill in ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_URL, SUPABASE_KEY
+# Fyll inn ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_URL, SUPABASE_KEY
 ```
 
 ```bash
@@ -45,13 +45,26 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-The API runs at `http://localhost:8000`.
+API-et kjører på `http://localhost:8000`.
 
-| Endpoint | Description |
-|---|---|
-| `GET /health` | Health check |
-| `POST /upload` | Upload a PDF (multipart/form-data `file` field) |
-| `POST /chat` | Ask a question (`{"question": "..."}`) |
+### Endepunkter
+
+| Metode | Endepunkt | Beskrivelse |
+|---|---|---|
+| `GET` | `/health` | Helsesjekk |
+| `POST` | `/upload` | Last opp PDF (`building_id` eller `project_id`) |
+| `POST` | `/chat` | Still spørsmål til dokumentene |
+| `GET/POST` | `/buildings` | Bygg – liste og opprett |
+| `PATCH/DELETE` | `/buildings/{id}` | Bygg – oppdater og slett |
+| `GET/POST` | `/projects` | Prosjekter – liste og opprett |
+| `GET` | `/projects/{id}` | Prosjektdetaljer med dokumenter |
+| `GET/POST` | `/assets` | Eiendeler |
+| `GET/POST` | `/work-orders` | Arbeidsordre |
+| `GET/POST` | `/inspection-reports` | Tilstandsrapporter |
+| `GET` | `/dashboard/{building_id}` | Dashbord-data |
+| `GET/POST` | `/orgs` | Organisasjoner |
+| `POST` | `/orgs/invite` | Generer invitasjonslenke |
+| `POST` | `/orgs/join` | Bli med via invitasjon |
 
 ---
 
@@ -60,7 +73,7 @@ The API runs at `http://localhost:8000`.
 ```bash
 cd frontend
 cp .env.local.example .env.local
-# Set NEXT_PUBLIC_API_URL=http://localhost:8000 (default)
+# Sett NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ```bash
@@ -68,32 +81,40 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Åpne [http://localhost:3000](http://localhost:3000).
+
+### Sider
+
+| Rute | Beskrivelse |
+|---|---|
+| `/dashboard` | Oversikt med KPI-er og aktivitetslogg |
+| `/assistent` | AI-chat mot bygningsdokumenter |
+| `/bygninger` | Administrer bygg |
+| `/eiendeler` | Tekniske installasjoner og utstyr |
+| `/arbeidsordre` | Opprett og følg opp arbeidsordre |
+| `/rapporter` | Tilstandsrapporter |
+| `/map` | Kart over prosjektporteføljen |
+| `/projects/[id]` | Prosjektdetaljer med analyse og dokumenter |
+| `/innstillinger` | Organisasjon, medlemmer og invitasjoner |
 
 ---
 
-## Usage
-
-1. Upload one or more PDFs using the left panel — they are chunked, embedded, and stored in Supabase automatically.
-2. Type a question in Norwegian in the chat panel and press Enter.
-3. The answer appears with source excerpts and similarity scores below it.
-
----
-
-## Environment variables
+## Miljøvariabler
 
 ### Backend (`backend/.env`)
 
-| Variable | Description |
+| Variabel | Beskrivelse |
 |---|---|
-| `ANTHROPIC_API_KEY` | Anthropic secret key |
-| `VOYAGE_API_KEY` | Voyage AI secret key |
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_KEY` | Supabase `anon` or `service_role` key |
-| `FRONTEND_URL` | Allowed CORS origin (default: `http://localhost:3000`) |
+| `ANTHROPIC_API_KEY` | Anthropic API-nøkkel |
+| `VOYAGE_API_KEY` | Voyage AI API-nøkkel |
+| `SUPABASE_URL` | Supabase prosjekt-URL |
+| `SUPABASE_KEY` | Supabase `anon` eller `service_role`-nøkkel |
+| `FRONTEND_URL` | Tillatt CORS-opprinnelse (standard: `http://localhost:3000`) |
 
 ### Frontend (`frontend/.env.local`)
 
-| Variable | Description |
+| Variabel | Beskrivelse |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | Base URL of the FastAPI backend |
+| `NEXT_PUBLIC_API_URL` | Base-URL til FastAPI-backend |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase prosjekt-URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon-nøkkel |

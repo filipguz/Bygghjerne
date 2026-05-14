@@ -7,13 +7,13 @@ const founders = [
     name: "Christian Widerø",
     role: "Grunder",
     photo: "/profil2.jpeg",
-    bio: "Christian er serviceleder hos Bravida Norge og har i over fire år jobbet tett på drift og vedlikehold av store tekniske anlegg. Han kjenner utfordringene på kroppen — og bygget Serv24 for å løse dem.",
+    bio: "Christian er serviceleder hos Bravida Norge og har i over fire år jobbet tett på drift og vedlikehold av store tekniske anlegg. Han kjenner utfordringene på kroppen — og bygget Bygghjerne for å løse dem.",
   },
   {
     name: "Filip Gustavsen",
     role: "Med-grunder & Utvikler",
     photo: "/profil1.jpeg",
-    bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Serv24 slik at det faktisk fungerer for folk i den hverdagen.",
+    bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
   },
 ];
 
@@ -83,14 +83,14 @@ export default function OmOss() {
 
       {/* Hero */}
       <section className="max-w-3xl mx-auto px-6 pt-16 pb-12 text-center">
-        <h1 className="text-4xl font-bold text-white mb-4">Ideen bak Serv24</h1>
+        <h1 className="text-4xl font-bold text-white mb-4">Ideen bak Bygghjerne</h1>
         <p className="text-lg leading-relaxed mb-4" style={{ color: "rgba(147,183,255,0.75)" }}>
           Store bygg — svømmehaller, skoler, kommunale bygg — inneholder enorme mengder teknisk kunnskap.
           Driftshåndbøker, servicerapporter, tegninger og instrukser er spredt over hundrevis av filer,
           og den viktigste kunnskapen lever ofte bare i hodet på erfarne driftsoperatører.
         </p>
         <p className="text-lg leading-relaxed" style={{ color: "rgba(147,183,255,0.75)" }}>
-          Når de slutter, forsvinner kunnskapen med dem. Serv24 er bygget for å fikse nettopp det —
+          Når de slutter, forsvinner kunnskapen med dem. Bygghjerne er bygget for å fikse nettopp det —
           ved å gjøre all dokumentasjon søkbar og tilgjengelig for hele driftsteamet, på et naturlig norsk språk.
         </p>
       </section>
@@ -170,7 +170,7 @@ export default function OmOss() {
             className="inline-flex items-center gap-2 bg-coral-500 hover:bg-coral-600 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-colors"
             style={{ boxShadow: "0 0 24px rgba(255,94,61,0.3)" }}
           >
-            Åpne Serv24
+            Åpne Bygghjerne
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
@@ -187,7 +187,7 @@ export default function OmOss() {
         }}
       >
         <div className="flex items-center justify-center gap-6">
-          <span>© 2026 Serv24</span>
+          <span>© 2026 Bygghjerne</span>
           <Link href="/om-oss" className="hover:text-white/60 transition-colors">Om oss</Link>
           <Link href="/teknologi" className="hover:text-white/60 transition-colors">Teknologi</Link>
         </div>

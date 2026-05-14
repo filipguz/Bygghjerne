@@ -112,15 +112,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <BackendWakeup>
       <div className="min-h-screen flex bg-slate-50">
 
-        {/* ── Desktop sidebar ─────────────────────────────────────────── */}
+        {/* ── Desktop sidebar ───────────────────────────────────────────── */}
         <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-slate-200">
+          {/* Logo */}
           <div className="px-5 py-4 border-b border-slate-100">
             <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <svg className="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              <span className="font-bold text-brand-900 text-sm">Serv24</span>
+              <span className="font-bold text-brand-900 text-sm">Bygghjerne</span>
             </Link>
           </div>
 
@@ -187,43 +188,44 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* ── Page content ────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Mobile top bar */}
-          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 shrink-0">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              <span className="font-bold text-brand-900 text-sm">Serv24</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link href="/bygninger" className="flex items-center gap-1 text-sm text-slate-600">
-                <span className="truncate max-w-[110px] font-medium">{buildingName ?? "—"}</span>
-                <svg className="h-3.5 w-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                </svg>
-              </Link>
-              <Link href="/innstillinger" className={`p-1 rounded-lg transition-colors ${isActive("/innstillinger") ? "text-brand-600" : "text-slate-400 hover:text-slate-600"}`}>
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </Link>
-            </div>
-          </div>
+        {/* ── Mobile top bar ────────────────────────────────────────────── */}
+        <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <svg className="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <span className="font-bold text-brand-900 text-sm">Bygghjerne</span>
+          </Link>
 
-          {/* Content — extra bottom padding on mobile for the nav bar */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-16 md:pb-0">
-            {children}
-          </div>
+          <Link href="/bygninger" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors max-w-[160px]">
+            <p className="text-xs font-semibold text-slate-700 truncate">{buildingName ?? "—"}</p>
+            <svg className="h-3 w-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className="p-2 text-slate-400 hover:text-slate-700 transition-colors"
+            aria-label="Logg ut"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </header>
+
+        {/* ── Page content ──────────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden pt-14 md:pt-0 pb-16 md:pb-0">
+          {children}
         </div>
 
-        {/* ── Mobile bottom nav ────────────────────────────────────────── */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex">
+        {/* ── Mobile bottom tab bar ─────────────────────────────────────── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 flex">
           {navItems.map((item) => {
-            const active = isActive(item.href);
+            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}

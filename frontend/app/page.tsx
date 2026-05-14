@@ -68,7 +68,7 @@ export default function Landing() {
       <section className="bg-navy-900 py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white text-center mb-3">
-            Hva Serv24 gjør for deg
+            Hva Bygghjerne gjør for deg
           </h2>
           <p className="text-center mb-16" style={{ color: "rgba(147,183,255,0.55)" }}>
             Dokumentasjon som faktisk er tilgjengelig — for hele teamet
@@ -87,7 +87,7 @@ export default function Landing() {
               </div>
               <h3 className="font-semibold text-white">Last opp PDF</h3>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(147,183,255,0.6)" }}>
-                Driftshåndbøker, servicerapporter og tegninger — Serv24 leser og forstår dem.
+                Driftshåndbøker, servicerapporter og tegninger — Bygghjerne leser og forstår dem.
               </p>
             </div>
 
@@ -135,7 +135,7 @@ export default function Landing() {
         }}
       >
         <div className="flex items-center justify-center gap-6">
-          <span>© 2026 Serv24</span>
+          <span>© 2026 Bygghjerne</span>
           <Link href="/om-oss" className="hover:text-white/60 transition-colors">Om oss</Link>
           <Link href="/teknologi" className="hover:text-white/60 transition-colors">Teknologi</Link>
         </div>

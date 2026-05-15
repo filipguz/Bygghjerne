@@ -18,6 +18,7 @@ import { Project } from '@/types/projects'
 import { apiFetch } from '@/utils/api'
 
 const ThreeViewer = dynamic(() => import('@/components/ThreeViewer'), { ssr: false })
+const PixelStreamingViewer = dynamic(() => import('@/components/PixelStreamingViewer'), { ssr: false })
 
 const ANALYSIS_ICONS: Record<string, React.ReactNode> = {
   sol:           <Sun size={14} />,
@@ -51,7 +52,23 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetch(`/api/backend/projects/${id}`)
       .then((r) => r.json())
-      .then((data) => { setProject(data); setLoading(false) })
+      .then((data) => {
+        setProject(data)
+        setLoading(false)
+        if (process.env.NODE_ENV === 'development') {
+          const a = data.analysis ?? {}
+          console.log('[scene-params]', {
+            project_id:      data.id,
+            sol_score:       a.sol?.score ?? null,
+            støy_score:      a.støy?.score ?? null,
+            flom_score:      a.flom?.score ?? null,
+            bra_m2:          data.bra_m2 ?? null,
+            status:          data.status ?? null,
+            bim_file_url:    data.bim_file_url ?? null,
+            unreal_model_id: data.unreal_model_id ?? null,
+          })
+        }
+      })
       .catch(() => setLoading(false))
   }, [id])
 
@@ -327,7 +344,11 @@ export default function ProjectDetailPage() {
               {/* 3D */}
               {activeTab === '3d' && (
                 <div className="h-[520px] rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700">
-                  <ThreeViewer project={project} />
+                  <PixelStreamingViewer
+                    streamUrl={project.unreal_stream_url}
+                    project={project}
+                    fallback={<ThreeViewer project={project} />}
+                  />
                 </div>
               )}
 

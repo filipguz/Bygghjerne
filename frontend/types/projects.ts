@@ -27,6 +27,9 @@ export interface Project {
     flom: AnalysisItem
     fjernvirkning: AnalysisItem
   }
+  unreal_stream_url?: string | null
+  unreal_model_id?: string | null
+  bim_file_url?: string | null
   created_at?: string
   documents?: Array<{
     id: string

@@ -391,3 +391,12 @@ values
     '{"sol": {"score": 59, "label": "Solforhold", "description": "Fjordene gir noe skyggefulle perioder."}, "støy": {"score": 70, "label": "Støy", "description": "Godt støyskjermet fra havnetrafikk."}, "flom": {"score": 55, "label": "Flomrisiko", "description": "Stormflo er relevant."}, "fjernvirkning": {"score": 95, "label": "Fjernvirkning", "description": "Fremtredende posisjon i bybildet."}}'::jsonb
   )
 on conflict do nothing;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- UNREAL ENGINE / PIXEL STREAMING — columns
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+alter table projects add column if not exists unreal_stream_url text;
+alter table projects add column if not exists unreal_model_id   text;
+alter table projects add column if not exists bim_file_url      text;

@@ -144,6 +144,40 @@ def get_project(project_id: str):
     return project
 
 
+class UnrealStatusRequest(BaseModel):
+    stream_url: str
+    status: str  # "ready" | "offline"
+
+
+@app.post("/projects/{project_id}/unreal/status")
+def update_unreal_status(project_id: str, body: UnrealStatusRequest):
+    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    url = body.stream_url if body.status == "ready" else None
+    supabase_client.table("projects").update({"unreal_stream_url": url}).eq("id", project_id).execute()
+    return {"project_id": project_id, "status": body.status, "unreal_stream_url": url}
+
+
+@app.get("/projects/{project_id}/scene-params")
+def get_scene_params(project_id: str):
+    result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    p = result.data[0]
+    analysis = p.get("analysis") or {}
+    return {
+        "project_id":     p["id"],
+        "sol_score":      (analysis.get("sol")   or {}).get("score"),
+        "støy_score":     (analysis.get("støy")  or {}).get("score"),
+        "flom_score":     (analysis.get("flom")  or {}).get("score"),
+        "bra_m2":         p.get("bra_m2"),
+        "status":         p.get("status"),
+        "bim_file_url":   p.get("bim_file_url"),
+        "unreal_model_id": p.get("unreal_model_id"),
+    }
+
+
 # ─── Org ──────────────────────────────────────────────────────────────────────
 
 class CreateOrgRequest(BaseModel):

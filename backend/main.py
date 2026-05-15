@@ -89,6 +89,12 @@ def assert_user_owns_building(user_id: str, building_id: str):
 
 # ─── Health ───────────────────────────────────────────────────────────────────
 
+@app.get("/")
+@app.head("/")
+def root():
+    return {"status": "ok"}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

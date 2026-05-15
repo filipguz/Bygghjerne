@@ -2,6 +2,8 @@ services:
   - type: web
     name: bygghjerne
     runtime: docker
+    port: 10000
+    healthCheckPath: /
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -15,3 +17,5 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      - key: PORT
+        value: "10000"

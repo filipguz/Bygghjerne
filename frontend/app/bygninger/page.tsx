@@ -46,6 +46,10 @@ export default function Bygninger() {
       apiFetch("/orgs/me").then((r) => r.json()),
     ])
       .then(([bData, org]) => {
+        if (!org) {
+          router.replace("/onboarding");
+          return;
+        }
         setBuildings(bData);
         setIsAdmin(org?.role === "admin");
         setLoading(false);

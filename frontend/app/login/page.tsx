@@ -56,7 +56,7 @@ function Login() {
       } else {
         const redirectTo = next
           ? `${window.location.origin}${next}`
-          : `${window.location.origin}/bygninger`;
+          : `${window.location.origin}/onboarding`;
         const { error } = await supabase.auth.signUp({
           email,
           password,

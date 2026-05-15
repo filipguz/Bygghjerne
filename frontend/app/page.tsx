@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
+import NeuralNetworkBackground from "@/components/NeuralNetworkBackground";
 
 const features = [
   {
@@ -115,7 +116,9 @@ export default function LandingPage() {
       <PublicNav />
 
       {/* Hero */}
-      <section className="flex flex-col items-center text-center px-6 pt-20 pb-20 max-w-4xl mx-auto w-full">
+      <div className="relative w-full">
+        <NeuralNetworkBackground />
+      <section className="relative z-10 flex flex-col items-center text-center px-6 pt-20 pb-24 max-w-4xl mx-auto w-full">
         <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-blue-200 text-sm font-medium px-4 py-1.5 rounded-full mb-8">
           <span className="h-2 w-2 rounded-full bg-coral-500 inline-block animate-pulse" />
           AI-drevet eiendomsforvaltning
@@ -147,6 +150,7 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+      </div>
 
       {/* Feature grid */}
       <section className="bg-navy-900 py-20 px-6">

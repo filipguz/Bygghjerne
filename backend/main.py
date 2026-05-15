@@ -145,8 +145,8 @@ def get_project(project_id: str):
 
 
 class UnrealStatusRequest(BaseModel):
-    stream_url: str
-    status: str  # "ready" | "offline"
+    status: str           # "ready" | "offline"
+    stream_url: str | None = None
 
 
 @app.post("/projects/{project_id}/unreal/status")
@@ -157,6 +157,27 @@ def update_unreal_status(project_id: str, body: UnrealStatusRequest):
     url = body.stream_url if body.status == "ready" else None
     supabase_client.table("projects").update({"unreal_stream_url": url}).eq("id", project_id).execute()
     return {"project_id": project_id, "status": body.status, "unreal_stream_url": url}
+
+
+class UnrealConfigRequest(BaseModel):
+    unreal_model_id: str | None = None
+    bim_file_url: str | None = None
+
+
+@app.patch("/projects/{project_id}/unreal/config")
+def update_unreal_config(project_id: str, body: UnrealConfigRequest):
+    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    patch: dict = {}
+    if body.unreal_model_id is not None:
+        patch["unreal_model_id"] = body.unreal_model_id
+    if body.bim_file_url is not None:
+        patch["bim_file_url"] = body.bim_file_url
+    if patch:
+        supabase_client.table("projects").update(patch).eq("id", project_id).execute()
+    updated = supabase_client.table("projects").select("id, unreal_model_id, bim_file_url, unreal_stream_url").eq("id", project_id).execute()
+    return updated.data[0]
 
 
 @app.get("/projects/{project_id}/scene-params")

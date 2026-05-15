@@ -18,8 +18,8 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 const navItems = [
-  { to: '/',    icon: LayoutDashboard, label: 'Oversikt' },
-  { to: '/map', icon: Map,             label: 'Kartvisning' },
+  { to: '/prosjekter', icon: LayoutDashboard, label: 'Oversikt' },
+  { to: '/map',        icon: Map,             label: 'Kartvisning' },
 ]
 
 interface Props {
@@ -40,7 +40,7 @@ export default function ProsjekterShell({ children }: Props) {
   }, [])
 
   function isActive(to: string) {
-    return to === '/' ? pathname === '/' : pathname.startsWith(to)
+    return pathname.startsWith(to)
   }
 
   return (

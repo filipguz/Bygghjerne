@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Building2, FileText, Sun, Volume2, Droplets, Eye,
-  Upload, Send, Loader2, X, ChevronDown, ChevronUp,
+  Upload, Send, Loader2, ChevronDown, ChevronUp, Settings2, Check,
 } from 'lucide-react'
 import ProsjekterShell from '@/components/ProsjekterShell'
 import ProjectStatusBadge from '@/components/ProjectStatusBadge'
@@ -49,25 +49,21 @@ export default function ProjectDetailPage() {
   const [uploadMsg, setUploadMsg]     = useState('')
   const fileRef                       = useRef<HTMLInputElement>(null)
 
+  // Unreal config state
+  const [showUnrealConfig, setShowUnrealConfig] = useState(false)
+  const [unrealModelId, setUnrealModelId]       = useState('')
+  const [bimFileUrl, setBimFileUrl]             = useState('')
+  const [savingConfig, setSavingConfig]         = useState(false)
+  const [configSaved, setConfigSaved]           = useState(false)
+
   useEffect(() => {
     fetch(`/api/backend/projects/${id}`)
       .then((r) => r.json())
       .then((data) => {
         setProject(data)
         setLoading(false)
-        if (process.env.NODE_ENV === 'development') {
-          const a = data.analysis ?? {}
-          console.log('[scene-params]', {
-            project_id:      data.id,
-            sol_score:       a.sol?.score ?? null,
-            støy_score:      a.støy?.score ?? null,
-            flom_score:      a.flom?.score ?? null,
-            bra_m2:          data.bra_m2 ?? null,
-            status:          data.status ?? null,
-            bim_file_url:    data.bim_file_url ?? null,
-            unreal_model_id: data.unreal_model_id ?? null,
-          })
-        }
+        setUnrealModelId(data.unreal_model_id ?? '')
+        setBimFileUrl(data.bim_file_url ?? '')
       })
       .catch(() => setLoading(false))
   }, [id])
@@ -75,6 +71,39 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Poll for stream URL changes when on 3D tab
+  useEffect(() => {
+    if (activeTab !== '3d') return
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetch(`/api/backend/projects/${id}`).then((r) => r.json())
+        setProject((prev) => {
+          if (!prev) return prev
+          if (prev.unreal_stream_url !== data.unreal_stream_url) return { ...prev, unreal_stream_url: data.unreal_stream_url }
+          return prev
+        })
+      } catch { /* ignore */ }
+    }, 10_000)
+    return () => clearInterval(interval)
+  }, [activeTab, id])
+
+  async function saveUnrealConfig() {
+    if (!project) return
+    setSavingConfig(true)
+    try {
+      await apiFetch(`/projects/${project.id}/unreal/config`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unreal_model_id: unrealModelId || null, bim_file_url: bimFileUrl || null }),
+      })
+      setProject((p) => p ? { ...p, unreal_model_id: unrealModelId || null, bim_file_url: bimFileUrl || null } : p)
+      setConfigSaved(true)
+      setTimeout(() => setConfigSaved(false), 2000)
+    } finally {
+      setSavingConfig(false)
+    }
+  }
 
   async function sendChat() {
     if (!input.trim() || chatLoading || !project) return
@@ -165,7 +194,7 @@ export default function ProjectDetailPage() {
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex-none px-8 pt-6 pb-4 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 mb-3 transition-colors">
+          <Link href="/prosjekter" className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 mb-3 transition-colors">
             <ArrowLeft size={13} />
             Prosjektoversikt
           </Link>
@@ -304,6 +333,71 @@ export default function ProjectDetailPage() {
                           className="overflow-hidden mt-3"
                         >
                           <FinancialCalculator project={project} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Unreal / 3D config */}
+                  <div>
+                    <button
+                      onClick={() => setShowUnrealConfig((v) => !v)}
+                      className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
+                    >
+                      {showUnrealConfig ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      <Settings2 size={14} />
+                      3D-konfigurasjon
+                    </button>
+                    <AnimatePresence>
+                      {showUnrealConfig && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22 }}
+                          className="overflow-hidden mt-3"
+                        >
+                          <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4 space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">
+                                Unreal modell-ID
+                              </label>
+                              <input
+                                value={unrealModelId}
+                                onChange={(e) => setUnrealModelId(e.target.value)}
+                                placeholder="f.eks. projekt-oslo-sentrum-v2"
+                                className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">
+                                BIM-fil URL
+                              </label>
+                              <input
+                                value={bimFileUrl}
+                                onChange={(e) => setBimFileUrl(e.target.value)}
+                                placeholder="https://…"
+                                className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                              />
+                            </div>
+                            {project.unreal_stream_url && (
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live stream aktiv
+                              </p>
+                            )}
+                            <button
+                              onClick={saveUnrealConfig}
+                              disabled={savingConfig}
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+                            >
+                              {configSaved
+                                ? <><Check size={14} /> Lagret</>
+                                : savingConfig
+                                  ? <><Loader2 size={14} className="animate-spin" /> Lagrer…</>
+                                  : 'Lagre'}
+                            </button>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>

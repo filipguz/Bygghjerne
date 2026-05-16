@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Sun, Moon, Home, LogOut } from "lucide-react";
+import { Sun, Moon, Home, LogOut, User } from "lucide-react";
 import BackendWakeup from "@/components/BackendWakeup";
 import { apiFetch } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
@@ -216,6 +216,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 }
               </div>
             </button>
+
+            <Link
+              href="/profil"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                isActive('/profil')
+                  ? 'bg-brand-50 dark:bg-blue-600/20 text-brand-700 dark:text-blue-400'
+                  : 'text-slate-500 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <User size={14} />
+              Min profil
+            </Link>
 
             <button
               onClick={handleLogout}

@@ -50,7 +50,7 @@ function Login() {
         } else {
           const orgRes = await apiFetch("/orgs/me");
           const org = orgRes.ok ? await orgRes.json() : null;
-          router.push(org ? "/bygninger" : "/onboarding");
+          router.push(org ? "/hjem" : "/onboarding");
         }
         router.refresh();
       } else {

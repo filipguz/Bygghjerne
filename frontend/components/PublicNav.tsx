@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 
 const BuildingIcon = () => (
@@ -7,42 +10,88 @@ const BuildingIcon = () => (
   </svg>
 );
 
-export default function PublicNav({ active }: { active?: "om-oss" | "teknologi" }) {
-  return (
-    <nav className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto w-full">
-      <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-        <BuildingIcon />
-        <span className="font-bold text-white text-lg">Bygghjerne</span>
-      </Link>
+const navLinks = [
+  { href: "/om-oss",    label: "Om oss",    key: "om-oss" as const },
+  { href: "/teknologi", label: "Teknologi", key: "teknologi" as const },
+];
 
-      <div className="flex items-center gap-6">
-        <Link
-          href="/om-oss"
-          className={`text-sm transition-colors ${
-            active === "om-oss"
-              ? "text-coral-400 font-medium"
-              : "text-white/60 hover:text-white"
-          }`}
-        >
-          Om oss
+export default function PublicNav({ active }: { active?: "om-oss" | "teknologi" }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <nav className="px-6 py-5 max-w-6xl mx-auto w-full">
+      <div className="flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <BuildingIcon />
+          <span className="font-bold text-white text-lg">Bygghjerne</span>
         </Link>
-        <Link
-          href="/teknologi"
-          className={`text-sm transition-colors ${
-            active === "teknologi"
-              ? "text-coral-400 font-medium"
-              : "text-white/60 hover:text-white"
-          }`}
+
+        {/* Desktop links */}
+        <div className="hidden md:flex items-center gap-6">
+          {navLinks.map(({ href, label, key }) => (
+            <Link
+              key={key}
+              href={href}
+              className={`text-sm transition-colors ${
+                active === key ? "text-coral-400 font-medium" : "text-white/60 hover:text-white"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+          <Link
+            href="/login"
+            className="border border-white/25 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors"
+          >
+            Prøv gratis
+          </Link>
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="md:hidden flex flex-col justify-center items-center w-9 h-9 gap-1.5 rounded-lg hover:bg-white/10 transition-colors"
+          aria-label={open ? "Lukk meny" : "Åpne meny"}
         >
-          Teknologi
-        </Link>
-        <Link
-          href="/login"
-          className="border border-white/25 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors"
-        >
-          Prøv gratis
-        </Link>
+          <span
+            className={`block h-0.5 w-5 bg-white transition-all duration-200 ${open ? "rotate-45 translate-y-2" : ""}`}
+          />
+          <span
+            className={`block h-0.5 w-5 bg-white transition-all duration-200 ${open ? "opacity-0" : ""}`}
+          />
+          <span
+            className={`block h-0.5 w-5 bg-white transition-all duration-200 ${open ? "-rotate-45 -translate-y-2" : ""}`}
+          />
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {open && (
+        <div className="md:hidden mt-4 flex flex-col gap-1 border-t border-white/10 pt-4">
+          {navLinks.map(({ href, label, key }) => (
+            <Link
+              key={key}
+              href={href}
+              onClick={() => setOpen(false)}
+              className={`px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                active === key
+                  ? "text-coral-400 font-medium bg-white/5"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+          <Link
+            href="/login"
+            onClick={() => setOpen(false)}
+            className="mt-2 text-center border border-white/25 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors"
+          >
+            Prøv gratis
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }

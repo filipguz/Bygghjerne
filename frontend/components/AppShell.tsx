@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Sun, Moon, Home, LogOut } from "lucide-react";
 import BackendWakeup from "@/components/BackendWakeup";
 import { apiFetch } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
+import { useTheme } from "@/context/ThemeContext";
 import { createClient } from "@/utils/supabase/client";
 
 const navItems = [
@@ -82,6 +84,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { buildingId, buildingName, loaded } = useBuilding();
+  const { theme, toggle } = useTheme();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!loaded || !ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-gray-950">
         <svg className="h-8 w-8 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -121,28 +124,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <BackendWakeup>
-      <div className="min-h-screen flex bg-slate-50">
+      <div className="min-h-screen flex bg-slate-50 dark:bg-gray-950">
 
         {/* ── Desktop sidebar ───────────────────────────────────────────── */}
-        <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white border-r border-slate-200">
+        <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white dark:bg-gray-900 border-r border-slate-200 dark:border-gray-800">
           {/* Logo */}
-          <div className="px-5 py-4 border-b border-slate-100">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
             <Link href="/hjem" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <svg className="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6 text-brand-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              <span className="font-bold text-brand-900 text-sm">Bygghjerne</span>
+              <span className="font-bold text-slate-900 dark:text-white text-sm">Bygghjerne</span>
             </Link>
+            <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">Driftsforvaltning</p>
           </div>
 
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Bygg</p>
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
+            <p className="text-xs text-slate-400 dark:text-gray-500 font-medium uppercase tracking-wide mb-1">Bygg</p>
             <Link href="/bygninger" className="flex items-center justify-between gap-1 group min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-brand-600 transition-colors">
+              <p className="text-sm font-semibold text-slate-800 dark:text-gray-200 truncate group-hover:text-brand-600 dark:group-hover:text-blue-400 transition-colors">
                 {buildingName ?? "—"}
               </p>
-              <svg className="h-3.5 w-3.5 text-slate-300 group-hover:text-brand-500 shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5 text-slate-300 dark:text-gray-600 group-hover:text-brand-500 dark:group-hover:text-blue-400 shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
               </svg>
             </Link>
@@ -157,11 +161,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     active
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-brand-50 dark:bg-blue-600/20 text-brand-700 dark:text-blue-400 border border-brand-200 dark:border-blue-600/30"
+                      : "text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <span className={active ? "text-brand-500" : "text-slate-400"}>{item.icon}</span>
+                  <span className={active ? "text-brand-500 dark:text-blue-400" : "text-slate-400 dark:text-gray-600"}>{item.icon}</span>
                   {item.label}
                 </Link>
               );
@@ -173,11 +177,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               href="/innstillinger"
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive("/innstillinger")
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                  ? "bg-brand-50 dark:bg-blue-600/20 text-brand-700 dark:text-blue-400"
+                  : "text-slate-500 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300"
               }`}
             >
-              <svg className={`h-4 w-4 ${isActive("/innstillinger") ? "text-brand-500" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`h-4 w-4 ${isActive("/innstillinger") ? "text-brand-500 dark:text-blue-400" : "text-slate-400 dark:text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -185,47 +189,77 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          <div className="px-4 py-4 border-t border-slate-100">
+          {/* Bytt modul */}
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-gray-800">
+            <Link
+              href="/hjem"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 dark:text-gray-500 hover:text-slate-800 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Home size={14} />
+              Bytt modul
+            </Link>
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 py-4 border-t border-slate-100 dark:border-gray-800 flex flex-col gap-2">
+            <button
+              onClick={toggle}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 border border-slate-200 dark:border-gray-700 transition-all"
+            >
+              <span className="text-xs text-slate-600 dark:text-gray-400 font-medium">
+                {theme === "dark" ? "Mørk modus" : "Lys modus"}
+              </span>
+              <div className="w-6 h-6 rounded-md flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm">
+                {theme === "dark"
+                  ? <Moon size={13} className="text-blue-400" />
+                  : <Sun  size={13} className="text-amber-500" />
+                }
+              </div>
+            </button>
+
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors w-full"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              <LogOut size={14} />
               Logg ut
             </button>
           </div>
         </aside>
 
         {/* ── Mobile top bar ────────────────────────────────────────────── */}
-        <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4">
+        <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 flex items-center justify-between px-4">
           <Link href="/hjem" className="flex items-center gap-2">
-            <svg className="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6 text-brand-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            <span className="font-bold text-brand-900 text-sm">Bygghjerne</span>
+            <span className="font-bold text-slate-900 dark:text-white text-sm">Bygghjerne</span>
           </Link>
 
-          <Link href="/bygninger" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors max-w-[160px]">
-            <p className="text-xs font-semibold text-slate-700 truncate">{buildingName ?? "—"}</p>
-            <svg className="h-3 w-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Link href="/bygninger" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-gray-800 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors max-w-[140px]">
+            <p className="text-xs font-semibold text-slate-700 dark:text-gray-300 truncate">{buildingName ?? "—"}</p>
+            <svg className="h-3 w-3 text-slate-400 dark:text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </Link>
 
-          <button
-            onClick={handleLogout}
-            className="p-2 text-slate-400 hover:text-slate-700 transition-colors"
-            aria-label="Logg ut"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggle}
+              className="p-2 text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 transition-colors"
+              aria-label="Bytt tema"
+            >
+              {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              aria-label="Logg ut"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </header>
 
         {/* ── Page content ──────────────────────────────────────────────── */}
@@ -234,7 +268,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* ── Mobile bottom tab bar ─────────────────────────────────────── */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 flex">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-slate-200 dark:border-gray-800 flex">
           {navItems.map((item) => {
             const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
@@ -242,7 +276,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors ${
-                  active ? "text-brand-600" : "text-slate-400 hover:text-slate-600"
+                  active
+                    ? "text-brand-600 dark:text-blue-400"
+                    : "text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400"
                 }`}
               >
                 {item.icon}
@@ -250,6 +286,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          <Link
+            href="/hjem"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 transition-colors"
+          >
+            <Home size={20} />
+            <span className="text-[10px] font-medium leading-none">Hjem</span>
+          </Link>
         </nav>
 
       </div>

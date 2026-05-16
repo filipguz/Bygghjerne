@@ -450,11 +450,25 @@ def join_org(token: str, user=Depends(get_current_user)):
 # ─── Documents ────────────────────────────────────────────────────────────────
 
 @app.get("/documents")
-def list_documents(building_id: str, user=Depends(get_current_user)):
-    assert_user_owns_building(user.id, building_id)
-    docs = supabase_client.table("documents").select(
-        "id, filename, created_at"
-    ).eq("building_id", building_id).order("created_at", desc=True).execute()
+def list_documents(
+    building_id: str | None = None,
+    project_id: str | None = None,
+    user=Depends(get_current_user),
+):
+    if not building_id and not project_id:
+        raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
+    if building_id:
+        assert_user_owns_building(user.id, building_id)
+    if project_id:
+        _assert_project_access(project_id, user.id)
+
+    query = supabase_client.table("documents").select("id, filename, created_at")
+    if building_id:
+        query = query.eq("building_id", building_id)
+    else:
+        query = query.eq("project_id", project_id)
+    docs = query.order("created_at", desc=True).execute()
+
     result = []
     for doc in docs.data:
         count_result = supabase_client.table("document_chunks").select(
@@ -470,9 +484,25 @@ def list_documents(building_id: str, user=Depends(get_current_user)):
 
 
 @app.delete("/documents/{document_id}")
-def delete_document(document_id: str, building_id: str, user=Depends(get_current_user)):
-    assert_user_owns_building(user.id, building_id)
-    doc = supabase_client.table("documents").select("id").eq("id", document_id).eq("building_id", building_id).execute()
+def delete_document(
+    document_id: str,
+    building_id: str | None = None,
+    project_id: str | None = None,
+    user=Depends(get_current_user),
+):
+    if not building_id and not project_id:
+        raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
+    if building_id:
+        assert_user_owns_building(user.id, building_id)
+    if project_id:
+        _assert_project_access(project_id, user.id)
+
+    query = supabase_client.table("documents").select("id").eq("id", document_id)
+    if building_id:
+        query = query.eq("building_id", building_id)
+    else:
+        query = query.eq("project_id", project_id)
+    doc = query.execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Dokument ikke funnet.")
     supabase_client.table("document_chunks").delete().eq("document_id", document_id).execute()
@@ -491,6 +521,8 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
     if building_id:
         assert_user_owns_building(user.id, building_id)
+    if project_id:
+        _assert_project_access(project_id, user.id)
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Kun PDF-filer støttes.")
@@ -567,6 +599,10 @@ def chat(request: ChatRequest, user=Depends(get_current_user)):
 
     if request.building_id and request.mode == "enhanced":
         return chat_with_tools(q, request.building_id, user.id)
+
+    if request.project_id and request.mode == "enhanced":
+        _assert_project_access(request.project_id, user.id)
+        return chat_with_project_tools(q, request.project_id, user.id)
 
     # Simple RAG path
     question_result = voyage_client.embed(
@@ -1123,6 +1159,221 @@ def chat_with_tools(question: str, building_id: str, user_id: str) -> dict:
 
     return {
         "answer": "Beklager, kunne ikke fullføre analysen. Prøv igjen.",
+        "sources": [],
+        "tools_used": tools_used,
+        "actions_taken": actions_taken,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENHANCED CHAT — Eiendomsutvikling
+# ═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT_SYSTEM_PROMPT = """Du er Bygghjerne, en AI-assistent for eiendomsutvikling.
+
+Du har tilgang til verktøy for å hente og oppdatere sanntidsdata om prosjektet, samt søke i opplastede dokumenter.
+
+Regler:
+- Svar alltid på norsk
+- Vær konkret og handlingsorientert — gi tydelige anbefalinger og neste steg
+- Henvis til konkrete tall og dokumenter når du begrunner noe
+- Når du oppdaterer prosjektstatus, bekreft alltid hva du endret
+- Kombiner prosjektdata og dokumentinnhold for å gi helhetlige vurderinger
+- Beregn nøkkeltall (pris/m², yield, lønnsomhet) når det er relevant"""
+
+PROJECT_TOOLS = [
+    {
+        "name": "get_project_summary",
+        "description": "Hent alle detaljer om prosjektet: navn, status, beliggenhet, areal, enheter, etasjer, investering, ferdigstillelsesår, regulering og analyseresultater.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "list_project_documents",
+        "description": "List alle dokumenter som er lastet opp til prosjektet (tegninger, rapporter, reguleringsplaner osv.).",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "search_documents",
+        "description": "Søk i prosjektets opplastede dokumenter etter relevant innhold.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Søketekst"}
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "update_project_status",
+        "description": "Oppdater prosjektets status. Gyldige verdier: mulighetsstudie, regulering, prosjektering, salg.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["mulighetsstudie", "regulering", "prosjektering", "salg"],
+                }
+            },
+            "required": ["status"],
+        },
+    },
+    {
+        "name": "calculate_key_figures",
+        "description": "Beregn nøkkeltall for prosjektet basert på investering, areal og antall enheter (pris per m², pris per enhet, estimert yield).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sale_price_per_m2": {
+                    "type": "number",
+                    "description": "Antatt salgspris per m² i NOK (valgfritt — brukes til yield-estimat)",
+                }
+            },
+            "required": [],
+        },
+    },
+]
+
+
+def _proj_get_summary(project_id: str) -> dict:
+    result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
+    if not result.data:
+        return {"error": "Prosjekt ikke funnet"}
+    p = result.data[0]
+    return {
+        "name": p.get("name"),
+        "status": p.get("status"),
+        "location": p.get("location"),
+        "address": p.get("address"),
+        "bra_m2": p.get("bra_m2"),
+        "units": p.get("units"),
+        "floors": p.get("floors"),
+        "investment_mnok": p.get("investment_mnok"),
+        "completion_year": p.get("completion_year"),
+        "zoning_status": p.get("zoning_status"),
+        "zoning_code": p.get("zoning_code"),
+        "description": p.get("description"),
+        "analysis": p.get("analysis"),
+    }
+
+
+def _proj_list_documents(project_id: str) -> list:
+    docs = supabase_client.table("documents").select("id, filename, created_at").eq("project_id", project_id).execute()
+    return docs.data or []
+
+
+def _proj_search_documents(query: str, project_id: str) -> list:
+    emb = voyage_client.embed([query], model=EMBEDDING_MODEL, input_type="query").embeddings[0]
+    result = supabase_client.rpc("match_chunks", {
+        "query_embedding": "[" + ",".join(str(x) for x in emb) + "]",
+        "match_threshold": MATCH_THRESHOLD,
+        "match_count": MATCH_COUNT,
+        "p_project_id": project_id,
+    }).execute()
+    chunks = result.data or []
+    return [{"filename": c["filename"], "content": c["content"][:600], "similarity": round(c["similarity"], 3)} for c in chunks]
+
+
+def _proj_update_status(project_id: str, user_id: str, status: str) -> dict:
+    if status not in VALID_PROJECT_STATUSES:
+        return {"error": f"Ugyldig status: {status}"}
+    _assert_project_access(project_id, user_id)
+    supabase_client.table("projects").update({"status": status}).eq("id", project_id).execute()
+    return {"success": True, "new_status": status}
+
+
+def _proj_calculate_key_figures(project_id: str, sale_price_per_m2: float | None = None) -> dict:
+    result = supabase_client.table("projects").select("bra_m2, units, investment_mnok").eq("id", project_id).execute()
+    if not result.data:
+        return {"error": "Prosjekt ikke funnet"}
+    p = result.data[0]
+    bra = p.get("bra_m2")
+    units = p.get("units")
+    inv_mnok = p.get("investment_mnok")
+    out: dict = {}
+    if inv_mnok and bra:
+        out["investment_per_m2_nok"] = round(inv_mnok * 1_000_000 / bra)
+    if inv_mnok and units:
+        out["investment_per_unit_nok"] = round(inv_mnok * 1_000_000 / units)
+    if sale_price_per_m2 and bra and inv_mnok:
+        gross_revenue = sale_price_per_m2 * bra
+        out["estimated_gross_revenue_mnok"] = round(gross_revenue / 1_000_000, 1)
+        out["estimated_gross_margin_pct"] = round((gross_revenue - inv_mnok * 1_000_000) / gross_revenue * 100, 1)
+    if not out:
+        out["note"] = "Mangler areal, enheter eller investeringsbeløp — fyll inn prosjektdetaljer for å beregne."
+    return out
+
+
+def _execute_project_tool(name: str, inputs: dict, project_id: str, user_id: str) -> dict:
+    if name == "get_project_summary":
+        return _proj_get_summary(project_id)
+    if name == "list_project_documents":
+        return {"documents": _proj_list_documents(project_id)}
+    if name == "search_documents":
+        docs = _proj_search_documents(inputs["query"], project_id)
+        return {"results": docs}
+    if name == "update_project_status":
+        return _proj_update_status(project_id, user_id, inputs["status"])
+    if name == "calculate_key_figures":
+        return _proj_calculate_key_figures(project_id, inputs.get("sale_price_per_m2"))
+    return {"error": f"Ukjent verktøy: {name}"}
+
+
+def chat_with_project_tools(question: str, project_id: str, user_id: str) -> dict:
+    messages: list[dict] = [{"role": "user", "content": question}]
+    tools_used: list[str] = []
+    actions_taken: list[dict] = []
+    doc_sources: list[dict] = []
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        response = anthropic_client.messages.create(
+            model=CHAT_MODEL,
+            max_tokens=2048,
+            system=PROJECT_SYSTEM_PROMPT,
+            tools=PROJECT_TOOLS,
+            messages=messages,
+        )
+
+        if response.stop_reason == "end_turn":
+            answer = next((b.text for b in response.content if hasattr(b, "text")), "")
+            return {
+                "answer": answer,
+                "response": answer,
+                "sources": doc_sources,
+                "tools_used": list(dict.fromkeys(tools_used)),
+                "actions_taken": actions_taken,
+            }
+
+        if response.stop_reason != "tool_use":
+            break
+
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = []
+
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            tools_used.append(block.name)
+            result = _execute_project_tool(block.name, block.input, project_id, user_id)
+
+            if block.name == "search_documents":
+                doc_sources.extend(
+                    {"filename": r["filename"], "excerpt": r.get("content", "")[:300], "similarity": r.get("similarity", 0)}
+                    for r in result.get("results", [])
+                )
+            if block.name == "update_project_status" and result.get("success"):
+                actions_taken.append({"type": "status_updated", "new_status": result["new_status"]})
+
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+
+        messages.append({"role": "user", "content": tool_results})
+
+    return {
+        "answer": "Beklager, kunne ikke fullføre analysen. Prøv igjen.",
+        "response": "Beklager, kunne ikke fullføre analysen. Prøv igjen.",
         "sources": [],
         "tools_used": tools_used,
         "actions_taken": actions_taken,

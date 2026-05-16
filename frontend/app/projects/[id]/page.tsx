@@ -1,13 +1,14 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ArrowLeft, Building2, FileText, Sun, Volume2, Droplets, Eye,
+  ArrowLeft, FileText, Sun, Volume2, Droplets, Eye,
   Upload, Send, Loader2, ChevronDown, ChevronUp, Settings2, Check,
+  Trash2, Bot,
 } from 'lucide-react'
 import ProsjekterShell from '@/components/ProsjekterShell'
 import ProjectStatusBadge from '@/components/ProjectStatusBadge'
@@ -30,7 +31,39 @@ const ANALYSIS_ICONS: Record<string, React.ReactNode> = {
 
 const ZONING_STEPS = ['Reguleringsplan', 'Offentlig ettersyn', 'Sluttbehandling', 'Vedtatt']
 
-interface ChatMsg { role: 'user' | 'assistant'; content: string }
+const QUICK_PROMPTS = [
+  'Hva sier dokumentene om reguleringsplanen?',
+  'Hva er de viktigste risikoene i dette prosjektet?',
+  'Oppsummer prosjektets status og fremdrift.',
+  'Hva er planlagt ferdigstillelse og nøkkeltall?',
+]
+
+interface ChatSource {
+  filename: string
+  document_id: string
+  excerpt: string
+  similarity: number
+}
+
+interface ActionTaken {
+  type: string
+  new_status?: string
+}
+
+interface ChatMsg {
+  role: 'user' | 'assistant'
+  content: string
+  sources?: ChatSource[]
+  tools_used?: string[]
+  actions_taken?: ActionTaken[]
+}
+
+interface DocItem {
+  id: string
+  filename: string
+  created_at: string | null
+  chunks: number
+}
 
 export default function ProjectDetailPage() {
   const { id }                        = useParams<{ id: string }>()
@@ -45,9 +78,13 @@ export default function ProjectDetailPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatEndRef                    = useRef<HTMLDivElement>(null)
 
-  // Upload state
+  // Document state
+  const [docs, setDocs]               = useState<DocItem[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
   const [uploading, setUploading]     = useState(false)
-  const [uploadMsg, setUploadMsg]     = useState('')
+  const [uploadMsg, setUploadMsg]     = useState<{ text: string; ok: boolean } | null>(null)
+  const [dragging, setDragging]       = useState(false)
+  const [deleting, setDeleting]       = useState<string | null>(null)
   const fileRef                       = useRef<HTMLInputElement>(null)
 
   // Unreal config state
@@ -59,10 +96,7 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     apiFetch(`/projects/${id}`)
-      .then((r) => {
-        if (!r.ok) throw new Error()
-        return r.json()
-      })
+      .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
         setProject(data)
         setLoading(false)
@@ -75,6 +109,17 @@ export default function ProjectDetailPage() {
         setLoading(false)
       })
   }, [id])
+
+  const fetchDocs = useCallback(async () => {
+    setDocsLoading(true)
+    try {
+      const res = await apiFetch(`/documents?project_id=${id}`)
+      if (res.ok) setDocs(await res.json())
+    } catch {}
+    finally { setDocsLoading(false) }
+  }, [id])
+
+  useEffect(() => { fetchDocs() }, [fetchDocs])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -113,20 +158,26 @@ export default function ProjectDetailPage() {
     }
   }
 
-  async function sendChat() {
-    if (!input.trim() || chatLoading || !project) return
-    const userMsg = input.trim()
+  async function sendChat(question?: string) {
+    const q = (question ?? input).trim()
+    if (!q || chatLoading || !project) return
     setInput('')
-    setMessages((m) => [...m, { role: 'user', content: userMsg }])
+    setMessages((m) => [...m, { role: 'user', content: q }])
     setChatLoading(true)
     try {
       const res = await apiFetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, project_id: project.id }),
+        body: JSON.stringify({ message: q, project_id: project.id, mode: 'enhanced' }),
       })
       const data = await res.json()
-      setMessages((m) => [...m, { role: 'assistant', content: data.response ?? data.message ?? 'Ingen svar.' }])
+      setMessages((m) => [...m, {
+        role: 'assistant',
+        content: data.answer ?? data.response ?? data.message ?? 'Ingen svar.',
+        sources: data.sources ?? [],
+        tools_used: data.tools_used ?? [],
+        actions_taken: data.actions_taken ?? [],
+      }])
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: 'Noe gikk galt. Prøv igjen.' }])
     } finally {
@@ -134,29 +185,46 @@ export default function ProjectDetailPage() {
     }
   }
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !project) return
+  async function handleFile(file: File) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadMsg({ text: 'Kun PDF-filer støttes.', ok: false })
+      return
+    }
     setUploading(true)
-    setUploadMsg('')
+    setUploadMsg(null)
     const form = new FormData()
     form.append('file', file)
-    form.append('project_id', project.id)
+    form.append('project_id', id)
     try {
       const res = await apiFetch('/upload', { method: 'POST', body: form })
       if (res.ok) {
-        setUploadMsg('Dokument lastet opp.')
-        const updated = await apiFetch(`/projects/${id}`).then((r) => r.json())
-        setProject(updated)
+        setUploadMsg({ text: 'Dokument lastet opp og indeksert.', ok: true })
+        await fetchDocs()
       } else {
-        setUploadMsg('Opplasting feilet.')
+        setUploadMsg({ text: 'Opplasting feilet.', ok: false })
       }
     } catch {
-      setUploadMsg('Opplasting feilet.')
+      setUploadMsg({ text: 'Opplasting feilet.', ok: false })
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
     }
+  }
+
+  async function handleDelete(docId: string) {
+    setDeleting(docId)
+    try {
+      await apiFetch(`/documents/${docId}?project_id=${id}`, { method: 'DELETE' })
+      setDocs((prev) => prev.filter((d) => d.id !== docId))
+    } catch {}
+    finally { setDeleting(null) }
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
   }
 
   if (loading) {
@@ -174,7 +242,7 @@ export default function ProjectDetailPage() {
       <ProsjekterShell>
         <div className="flex flex-col items-center justify-center h-full gap-3">
           <p className="text-slate-500 dark:text-gray-500 text-sm">Prosjekt ikke funnet.</p>
-          <Link href="/" className="text-blue-600 dark:text-blue-400 text-sm hover:underline">← Tilbake til oversikt</Link>
+          <Link href="/prosjekter" className="text-blue-600 dark:text-blue-400 text-sm hover:underline">← Tilbake til oversikt</Link>
         </div>
       </ProsjekterShell>
     )
@@ -194,7 +262,7 @@ export default function ProjectDetailPage() {
     { id: 'analyse',    label: 'Analyse' },
     { id: '3d',         label: '3D-modell' },
     { id: 'chat',       label: 'Spør AI' },
-    { id: 'dokumenter', label: 'Dokumenter' },
+    { id: 'dokumenter', label: `Dokumenter${docs.length > 0 ? ` (${docs.length})` : ''}` },
   ] as const
 
   return (
@@ -230,13 +298,13 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-0.5 mt-4">
-            {TABS.map(({ id, label }) => (
+          <div className="flex gap-0.5 mt-4 flex-wrap">
+            {TABS.map(({ id: tabId, label }) => (
               <button
-                key={id}
-                onClick={() => setActiveTab(id)}
+                key={tabId}
+                onClick={() => setActiveTab(tabId)}
                 className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                  activeTab === id
+                  activeTab === tabId
                     ? 'bg-blue-600 text-white'
                     : 'text-slate-500 dark:text-gray-500 hover:text-slate-800 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800'
                 }`}
@@ -258,23 +326,20 @@ export default function ProjectDetailPage() {
               transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
               className="p-8"
             >
+
               {/* OVERSIKT */}
               {activeTab === 'oversikt' && (
                 <div className="max-w-3xl space-y-6">
                   {project.description && (
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">
-                        Beskrivelse
-                      </h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">Beskrivelse</h3>
                       <p className="text-sm text-slate-700 dark:text-gray-300 leading-relaxed">{project.description}</p>
                     </div>
                   )}
 
                   {/* Zoning progress */}
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3">
-                      Reguleringsstatus
-                    </h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3">Reguleringsstatus</h3>
                     <div className="flex items-center gap-0">
                       {ZONING_STEPS.map((step, i) => (
                         <div key={step} className="flex items-center flex-1 last:flex-none">
@@ -308,21 +373,17 @@ export default function ProjectDetailPage() {
                   {/* Investment summary */}
                   {project.investment_mnok && (
                     <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">
-                        Investering
-                      </h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">Investering</h3>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {project.investment_mnok.toLocaleString('no', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MNOK
                       </p>
                       <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">
-                        {project.bra_m2
-                          ? `≈ ${Math.round((project.investment_mnok * 1_000_000) / project.bra_m2).toLocaleString('no')} kr / m²`
-                          : ''}
+                        {project.bra_m2 ? `≈ ${Math.round((project.investment_mnok * 1_000_000) / project.bra_m2).toLocaleString('no')} kr / m²` : ''}
                       </p>
                     </div>
                   )}
 
-                  {/* Financial calculator toggle */}
+                  {/* Financial calculator */}
                   <div>
                     <button
                       onClick={() => setShowCalc((v) => !v)}
@@ -367,9 +428,7 @@ export default function ProjectDetailPage() {
                         >
                           <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4 space-y-3">
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">
-                                Unreal modell-ID
-                              </label>
+                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Unreal modell-ID</label>
                               <input
                                 value={unrealModelId}
                                 onChange={(e) => setUnrealModelId(e.target.value)}
@@ -378,9 +437,7 @@ export default function ProjectDetailPage() {
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">
-                                BIM-fil URL
-                              </label>
+                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">BIM-fil URL</label>
                               <input
                                 value={bimFileUrl}
                                 onChange={(e) => setBimFileUrl(e.target.value)}
@@ -399,11 +456,7 @@ export default function ProjectDetailPage() {
                               disabled={savingConfig}
                               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
                             >
-                              {configSaved
-                                ? <><Check size={14} /> Lagret</>
-                                : savingConfig
-                                  ? <><Loader2 size={14} className="animate-spin" /> Lagrer…</>
-                                  : 'Lagre'}
+                              {configSaved ? <><Check size={14} /> Lagret</> : savingConfig ? <><Loader2 size={14} className="animate-spin" /> Lagrer…</> : 'Lagre'}
                             </button>
                           </div>
                         </motion.div>
@@ -434,9 +487,7 @@ export default function ProjectDetailPage() {
                   )}
                   {analysisEntries.length > 0 && (
                     <div className="mt-6 h-72">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-4">
-                        Radarkart
-                      </h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-4">Radarkart</h3>
                       <RadarChart projects={[project]} />
                     </div>
                   )}
@@ -460,41 +511,106 @@ export default function ProjectDetailPage() {
 
               {/* CHAT */}
               {activeTab === 'chat' && (
-                <div className="max-w-2xl flex flex-col h-[520px]">
-                  <div className="flex-1 overflow-y-auto space-y-3 pb-4">
-                    {messages.length === 0 && (
-                      <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-gray-600 pt-2">
-                        <Building2 size={16} />
-                        <span>Still spørsmål om {project.name}. Last opp dokumenter for bedre svar.</span>
+                <div className="max-w-2xl flex flex-col h-[560px]">
+
+                  {/* Quick prompts */}
+                  {messages.length === 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-500 mb-3">
+                        <Bot size={16} className="text-blue-500" />
+                        <span>Still spørsmål om <span className="font-medium text-slate-700 dark:text-gray-300">{project.name}</span></span>
                       </div>
-                    )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {QUICK_PROMPTS.map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => sendChat(p)}
+                            className="text-left text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                      {docs.length === 0 && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                          Last opp dokumenter i "Dokumenter"-fanen for bedre svar.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto space-y-4 pb-4">
                     {messages.map((m, i) => (
                       <motion.div
                         key={i}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2 }}
-                        className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
                       >
-                        <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                        <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                           m.role === 'user'
                             ? 'bg-blue-600 text-white'
                             : 'bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-gray-200'
                         }`}>
                           {m.content}
                         </div>
+
+                        {/* Actions taken */}
+                        {m.role === 'assistant' && m.actions_taken && m.actions_taken.length > 0 && (
+                          <div className="mt-2 max-w-[85%] space-y-1">
+                            {m.actions_taken.map((a, ai) => (
+                              <div key={ai} className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-1.5">
+                                <Check size={11} className="flex-none" />
+                                {a.type === 'status_updated' && <span>Status oppdatert til <strong>{a.new_status}</strong></span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Tools used */}
+                        {m.role === 'assistant' && m.tools_used && m.tools_used.length > 0 && (
+                          <div className="mt-1.5 max-w-[85%] flex flex-wrap gap-1">
+                            {m.tools_used.map((t, ti) => (
+                              <span key={ti} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-600 border border-slate-200 dark:border-gray-700">
+                                {t.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Sources */}
+                        {m.role === 'assistant' && m.sources && m.sources.length > 0 && (
+                          <div className="mt-2 max-w-[85%] space-y-1.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 px-1">Kilder</p>
+                            {m.sources.map((s, si) => (
+                              <div key={si} className="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <FileText size={11} className="text-blue-500 flex-none" />
+                                  <span className="text-xs font-medium text-slate-700 dark:text-gray-300 truncate">{s.filename}</span>
+                                  <span className="ml-auto text-[10px] text-slate-400 dark:text-gray-600 shrink-0">{Math.round(s.similarity * 100)}%</span>
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-gray-500 leading-relaxed line-clamp-2">{s.excerpt}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                     {chatLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-slate-100 dark:bg-gray-800 rounded-2xl px-4 py-2.5">
+                        <div className="bg-slate-100 dark:bg-gray-800 rounded-2xl px-4 py-2.5 flex items-center gap-2">
                           <Loader2 size={14} className="text-slate-400 dark:text-gray-600 animate-spin" />
+                          <span className="text-xs text-slate-400 dark:text-gray-600">Tenker…</span>
                         </div>
                       </div>
                     )}
                     <div ref={chatEndRef} />
                   </div>
 
+                  {/* Input */}
                   <div className="flex-none flex gap-2 pt-3 border-t border-slate-200 dark:border-gray-800">
                     <input
                       value={input}
@@ -504,7 +620,7 @@ export default function ProjectDetailPage() {
                       className="flex-1 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-slate-800 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
                     />
                     <button
-                      onClick={sendChat}
+                      onClick={() => sendChat()}
                       disabled={!input.trim() || chatLoading}
                       className="flex-none w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 flex items-center justify-center text-white transition-colors"
                     >
@@ -516,52 +632,112 @@ export default function ProjectDetailPage() {
 
               {/* DOKUMENTER */}
               {activeTab === 'dokumenter' && (
-                <div className="max-w-2xl space-y-4">
-                  {/* Upload */}
-                  <div className="rounded-xl border border-dashed border-slate-300 dark:border-gray-700 p-6 text-center">
-                    <Upload size={24} className="mx-auto mb-2 text-slate-400 dark:text-gray-600" />
-                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-3">Last opp PDF-dokumenter for dette prosjektet</p>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleUpload}
-                      className="hidden"
-                    />
-                    <button
+                <div className="max-w-2xl space-y-5">
+
+                  {/* Upload area */}
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3">Last opp dokument</h3>
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                      onDragLeave={() => setDragging(false)}
+                      onDrop={onDrop}
                       onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium flex items-center gap-2 mx-auto transition-colors"
+                      className={`rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all ${
+                        dragging
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : uploading
+                            ? 'border-slate-200 dark:border-gray-700 opacity-60 pointer-events-none'
+                            : 'border-slate-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-gray-800/50'
+                      }`}
                     >
-                      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                      {uploading ? 'Laster opp…' : 'Velg fil'}
-                    </button>
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }}
+                      />
+                      {uploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 size={28} className="text-blue-500 animate-spin" />
+                          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Laster opp og indekserer…</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload size={28} className="text-slate-400 dark:text-gray-600" />
+                          <p className="text-sm font-medium text-slate-700 dark:text-gray-300">Dra og slipp PDF her</p>
+                          <p className="text-xs text-slate-400 dark:text-gray-600">eller klikk for å velge fil</p>
+                        </div>
+                      )}
+                    </div>
+
                     {uploadMsg && (
-                      <p className="text-xs text-slate-500 dark:text-gray-500 mt-2">{uploadMsg}</p>
+                      <p className={`text-sm mt-2 px-3 py-2 rounded-lg ${
+                        uploadMsg.ok
+                          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
+                          : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                      }`}>
+                        {uploadMsg.text}
+                      </p>
                     )}
                   </div>
 
                   {/* Document list */}
-                  {(project.documents?.length ?? 0) > 0 ? (
-                    <div className="space-y-2">
-                      {project.documents!.map((doc) => (
-                        <div key={doc.id} className="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
-                          <FileText size={16} className="flex-none text-slate-400 dark:text-gray-500" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">{doc.filename}</p>
-                            <p className="text-xs text-slate-400 dark:text-gray-600">
-                              {new Date(doc.created_at).toLocaleDateString('no')}
-                              {doc.chunks ? ` · ${doc.chunks} chunks` : ''}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3">
+                      Opplastede dokumenter {docs.length > 0 && `(${docs.length})`}
+                    </h3>
+                    {docsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-gray-600">
+                        <Loader2 size={14} className="animate-spin" /> Laster…
+                      </div>
+                    ) : docs.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-200 dark:border-gray-800 p-6 text-center">
+                        <FileText size={20} className="mx-auto mb-2 text-slate-300 dark:text-gray-700" />
+                        <p className="text-sm text-slate-400 dark:text-gray-600">Ingen dokumenter lastet opp ennå.</p>
+                        <p className="text-xs text-slate-400 dark:text-gray-700 mt-1">Last opp reguleringsplaner, rapporter og analyser for AI-søk.</p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {docs.map((doc) => (
+                          <li key={doc.id} className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 group">
+                            <FileText size={16} className="flex-none text-blue-500" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">{doc.filename}</p>
+                              <p className="text-xs text-slate-400 dark:text-gray-600">
+                                {doc.chunks} chunks
+                                {doc.created_at ? ` · ${new Date(doc.created_at).toLocaleDateString('no')}` : ''}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDelete(doc.id)}
+                              disabled={deleting === doc.id}
+                              className="flex-none p-1.5 rounded-lg text-slate-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                              title="Slett dokument"
+                            >
+                              {deleting === doc.id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <Trash2 size={14} />
+                              }
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {docs.length > 0 && (
+                    <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 flex items-start gap-3">
+                      <Bot size={16} className="text-blue-500 flex-none mt-0.5" />
+                      <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                        {docs.length} dokument{docs.length > 1 ? 'er' : ''} er indeksert og klart for AI-søk.
+                        Gå til <button onClick={() => setActiveTab('chat')} className="font-semibold underline">Spør AI</button>-fanen for å stille spørsmål.
+                      </p>
                     </div>
-                  ) : (
-                    <p className="text-sm text-slate-400 dark:text-gray-600">Ingen dokumenter lastet opp ennå.</p>
                   )}
                 </div>
               )}
+
             </motion.div>
           </AnimatePresence>
         </div>

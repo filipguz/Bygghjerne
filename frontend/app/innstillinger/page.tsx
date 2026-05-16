@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { apiFetch, apiErrorMessage } from "@/utils/api";
+import { createClient } from "@/utils/supabase/client";
 
 interface Profile {
   id: string;
@@ -176,7 +177,18 @@ export default function Innstillinger() {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 dark:border-gray-800">
+                  <div className="pt-3 border-t border-slate-100 dark:border-gray-800 flex items-center justify-between">
+                    <button
+                      onClick={async () => {
+                        const supabase = createClient();
+                        await supabase.auth.signOut();
+                        router.push("/login");
+                        router.refresh();
+                      }}
+                      className="text-xs text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-100 font-medium transition-colors"
+                    >
+                      Logg ut
+                    </button>
                     <button
                       onClick={() => { setShowDeleteDialog(true); setDeleteConfirm(""); setDeleteError(null); setTimeout(() => deleteInputRef.current?.focus(), 50); }}
                       className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"

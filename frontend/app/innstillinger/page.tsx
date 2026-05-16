@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { apiFetch, apiErrorMessage } from "@/utils/api";
+
+interface Profile {
+  id: string;
+  email: string;
+  created_at: string;
+  org_role: string | null;
+}
 
 interface Member {
   user_id: string;
@@ -31,9 +39,18 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 export default function Innstillinger() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [org, setOrg] = useState<Org | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Delete account state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
 
   // Org name edit
   const [editingName, setEditingName] = useState(false);
@@ -49,14 +66,30 @@ export default function Innstillinger() {
 
   useEffect(() => {
     Promise.all([
+      apiFetch("/users/me").then((r) => r.json()),
       apiFetch("/orgs/me").then((r) => r.json()),
       apiFetch("/orgs/members").then((r) => r.json()),
-    ]).then(([orgData, membersData]) => {
+    ]).then(([profileData, orgData, membersData]) => {
+      setProfile(profileData);
       setOrg(orgData);
       setOrgName(orgData?.name ?? "");
       setMembers(membersData);
     }).finally(() => setLoading(false));
   }, []);
+
+  async function handleDeleteAccount() {
+    if (!profile || deleteConfirm !== profile.email) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await apiFetch("/users/me", { method: "DELETE" });
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
+      router.push("/login");
+    } catch (e: unknown) {
+      setDeleteError(e instanceof Error ? e.message : "Noe gikk galt.");
+      setDeleting(false);
+    }
+  }
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -113,6 +146,48 @@ export default function Innstillinger() {
         </div>
 
         <div className="px-4 md:px-6 py-6 flex flex-col gap-6 max-w-2xl">
+
+          {/* Profile section */}
+          <section className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-gray-100">Min konto</h2>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-4">
+              {loading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="h-4 bg-slate-100 dark:bg-gray-800 rounded animate-pulse w-48" />
+                  <div className="h-4 bg-slate-100 dark:bg-gray-800 rounded animate-pulse w-32" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
+                        {profile?.email?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-gray-100">{profile?.email}</p>
+                      <p className="text-xs text-slate-400 dark:text-gray-500">
+                        Konto opprettet {profile?.created_at
+                          ? new Date(profile.created_at).toLocaleDateString("nb-NO", { day: "2-digit", month: "long", year: "numeric" })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 dark:border-gray-800">
+                    <button
+                      onClick={() => { setShowDeleteDialog(true); setDeleteConfirm(""); setDeleteError(null); setTimeout(() => deleteInputRef.current?.focus(), 50); }}
+                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"
+                    >
+                      Slett konto
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
 
           {/* Org section */}
           <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -252,6 +327,59 @@ export default function Innstillinger() {
 
         </div>
       </div>
+
+      {/* Delete account dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-slate-200 dark:border-gray-700 w-full max-w-md p-6 flex flex-col gap-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-gray-100">Slett konto</h3>
+              <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
+                Dette er en permanent handling og kan ikke angres. All din data vil bli slettet.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-slate-600 dark:text-gray-400">
+                Skriv inn e-postadressen din for å bekrefte
+                <span className="ml-1 font-semibold text-slate-800 dark:text-gray-200">{profile?.email}</span>
+              </label>
+              <input
+                ref={deleteInputRef}
+                type="email"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && deleteConfirm === profile?.email && handleDeleteAccount()}
+                placeholder={profile?.email}
+                className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 placeholder-slate-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+              />
+            </div>
+
+            {deleteError && (
+              <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-gray-100 transition-colors disabled:opacity-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm !== profile?.email || deleting}
+                className="px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-40"
+              >
+                {deleting ? "Sletter…" : "Slett konto permanent"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

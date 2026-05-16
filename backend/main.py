@@ -292,6 +292,34 @@ def create_org(body: CreateOrgRequest, user=Depends(get_current_user)):
     return org.data[0]
 
 
+@app.get("/users/me")
+def get_my_profile(user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    return {
+        "id": user.id,
+        "email": user.email,
+        "created_at": user.created_at,
+        "org_role": org.get("role") if org else None,
+    }
+
+
+@app.delete("/users/me")
+def delete_my_account(user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    if org and org.get("role") == "admin":
+        other_admins = supabase_client.table("org_members").select("id").eq(
+            "org_id", org["id"]
+        ).eq("role", "admin").neq("user_id", user.id).execute()
+        if not other_admins.data:
+            raise HTTPException(
+                status_code=400,
+                detail="Du er eneste admin. Overfør admin-rollen til et annet medlem før du sletter kontoen.",
+            )
+    supabase_client.table("org_members").delete().eq("user_id", user.id).execute()
+    supabase_client.auth.admin.delete_user(user.id)
+    return {"deleted": True}
+
+
 @app.get("/orgs/me")
 def get_my_org(user=Depends(get_current_user)):
     return _get_user_org(user.id)

@@ -445,12 +445,16 @@ export default function ProjectDetailPage() {
 
               {/* 3D */}
               {activeTab === '3d' && (
-                <div className="h-[520px] rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700">
-                  <PixelStreamingViewer
-                    streamUrl={project.unreal_stream_url}
-                    project={project}
-                    fallback={<ThreeViewer project={project} />}
-                  />
+                <div className="h-[560px] rounded-xl border border-slate-200 dark:border-gray-700 overflow-hidden">
+                  {project.unreal_stream_url ? (
+                    <PixelStreamingViewer
+                      streamUrl={project.unreal_stream_url}
+                      project={project}
+                      fallback={<ThreeViewer project={project} />}
+                    />
+                  ) : (
+                    <ThreeViewer project={project} />
+                  )}
                 </div>
               )}
 

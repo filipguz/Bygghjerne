@@ -93,6 +93,8 @@ export default function ProjectDetailPage() {
   const [bimFileUrl, setBimFileUrl]             = useState('')
   const [savingConfig, setSavingConfig]         = useState(false)
   const [configSaved, setConfigSaved]           = useState(false)
+  const [streamUrlInput, setStreamUrlInput]     = useState('https://connector.eagle3dstreaming.com/v5/demo/E3DSFeaturesTemplate/E3DS-Iframe-Demo')
+  const [savingStream, setSavingStream]         = useState(false)
 
   useEffect(() => {
     apiFetch(`/projects/${id}`)
@@ -155,6 +157,26 @@ export default function ProjectDetailPage() {
       setTimeout(() => setConfigSaved(false), 2000)
     } finally {
       setSavingConfig(false)
+    }
+  }
+
+  async function setStreamStatus(status: 'ready' | 'offline') {
+    if (!project) return
+    setSavingStream(true)
+    try {
+      const body: Record<string, string> = { status }
+      if (status === 'ready') body.stream_url = streamUrlInput.trim()
+      const res = await apiFetch(`/projects/${project.id}/unreal/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        const newUrl = status === 'ready' ? streamUrlInput.trim() : null
+        setProject((p) => p ? { ...p, unreal_stream_url: newUrl } : p)
+      }
+    } finally {
+      setSavingStream(false)
     }
   }
 
@@ -426,38 +448,83 @@ export default function ProjectDetailPage() {
                           transition={{ duration: 0.22 }}
                           className="overflow-hidden mt-3"
                         >
-                          <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4 space-y-3">
-                            <div>
-                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Unreal modell-ID</label>
+                          <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4 space-y-4">
+
+                            {/* Pixel Streaming */}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-semibold text-slate-600 dark:text-gray-400 uppercase tracking-wider">Pixel Streaming URL</label>
+                                {project.unreal_stream_url && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Aktiv
+                                  </span>
+                                )}
+                              </div>
                               <input
-                                value={unrealModelId}
-                                onChange={(e) => setUnrealModelId(e.target.value)}
-                                placeholder="f.eks. projekt-oslo-sentrum-v2"
-                                className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">BIM-fil URL</label>
-                              <input
-                                value={bimFileUrl}
-                                onChange={(e) => setBimFileUrl(e.target.value)}
+                                value={streamUrlInput}
+                                onChange={(e) => setStreamUrlInput(e.target.value)}
                                 placeholder="https://…"
-                                className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                                disabled={!!project.unreal_stream_url}
+                                className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                               />
+                              <div className="flex gap-2">
+                                {!project.unreal_stream_url ? (
+                                  <button
+                                    onClick={() => setStreamStatus('ready')}
+                                    disabled={savingStream || !streamUrlInput.trim()}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+                                  >
+                                    {savingStream ? <><Loader2 size={13} className="animate-spin" /> Aktiverer…</> : 'Aktiver stream'}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => setStreamStatus('offline')}
+                                    disabled={savingStream}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 dark:hover:bg-gray-600 disabled:opacity-40 text-slate-700 dark:text-gray-300 text-sm font-medium transition-colors"
+                                  >
+                                    {savingStream ? <><Loader2 size={13} className="animate-spin" /> …</> : 'Deaktiver stream'}
+                                  </button>
+                                )}
+                                {project.unreal_stream_url && (
+                                  <button
+                                    onClick={() => setActiveTab('3d')}
+                                    className="px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                  >
+                                    Gå til 3D-fanen →
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            {project.unreal_stream_url && (
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                Live stream aktiv
-                              </p>
-                            )}
-                            <button
-                              onClick={saveUnrealConfig}
-                              disabled={savingConfig}
-                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
-                            >
-                              {configSaved ? <><Check size={14} /> Lagret</> : savingConfig ? <><Loader2 size={14} className="animate-spin" /> Lagrer…</> : 'Lagre'}
-                            </button>
+
+                            <div className="border-t border-slate-200 dark:border-gray-700 pt-4 space-y-3">
+                              <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-gray-600">Avansert</p>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Unreal modell-ID</label>
+                                <input
+                                  value={unrealModelId}
+                                  onChange={(e) => setUnrealModelId(e.target.value)}
+                                  placeholder="f.eks. projekt-oslo-sentrum-v2"
+                                  className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">BIM-fil URL</label>
+                                <input
+                                  value={bimFileUrl}
+                                  onChange={(e) => setBimFileUrl(e.target.value)}
+                                  placeholder="https://…"
+                                  className="w-full rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                                />
+                              </div>
+                              <button
+                                onClick={saveUnrealConfig}
+                                disabled={savingConfig}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+                              >
+                                {configSaved ? <><Check size={14} /> Lagret</> : savingConfig ? <><Loader2 size={14} className="animate-spin" /> Lagrer…</> : 'Lagre konfig'}
+                              </button>
+                            </div>
                           </div>
                         </motion.div>
                       )}

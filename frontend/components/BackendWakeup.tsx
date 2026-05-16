@@ -13,7 +13,7 @@ export default function BackendWakeup({ children }: { children: React.ReactNode 
     async function ping() {
       while (!cancelled) {
         try {
-          const res = await fetch("/api/backend/health", { cache: "no-store" });
+          const res = await fetch("/api/health", { cache: "no-store" });
           if (res.ok) {
             clearTimeout(slowTimer);
             if (!cancelled) setReady(true);

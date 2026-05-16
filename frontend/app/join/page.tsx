@@ -43,7 +43,7 @@ function Join() {
   // 1. Fetch org name from invite token
   useEffect(() => {
     if (!token) return;
-    fetch(`/api/backend/orgs/invite/${token}`)
+    fetch(`/api/orgs/invite/${token}`)
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));

@@ -4,7 +4,7 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
-  return fetch(`/api/backend${path}`, {
+  return fetch(`/api${path}`, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),

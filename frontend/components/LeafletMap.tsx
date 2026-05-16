@@ -20,6 +20,24 @@ function FlyToProject({ project }: { project: Project | null }) {
   return null
 }
 
+function FitProjects({ projects }: { projects: Project[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (projects.length === 0) return
+    if (projects.length === 1) {
+      map.setView(projects[0].coordinates, 13)
+      return
+    }
+    const lats = projects.map((p) => p.coordinates[0])
+    const lngs = projects.map((p) => p.coordinates[1])
+    map.fitBounds(
+      [[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]],
+      { padding: [48, 48] }
+    )
+  }, [projects, map])
+  return null
+}
+
 interface Props {
   projects:  Project[]
   selected:  Project | null
@@ -28,13 +46,14 @@ interface Props {
 
 export default function LeafletMap({ projects, selected, onSelect }: Props) {
   return (
-    <MapContainer center={[59.5, 9.5]} zoom={6} style={{ width: '100%', height: '100%' }}>
+    <MapContainer center={[58.3, 8.2]} zoom={8} style={{ width: '100%', height: '100%' }}>
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         subdomains="abcd"
         maxZoom={19}
       />
+      <FitProjects projects={projects} />
       <FlyToProject project={selected} />
       {projects.map((p) => (
         <CircleMarker

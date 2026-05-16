@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   // Innloggede brukere trenger ikke loginssiden
   if (user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/bygninger", request.url));
+    return NextResponse.redirect(new URL("/hjem", request.url));
   }
 
   // Offentlige stier — ingen auth nødvendig

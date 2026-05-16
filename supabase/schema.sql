@@ -400,3 +400,10 @@ on conflict do nothing;
 alter table projects add column if not exists unreal_stream_url text;
 alter table projects add column if not exists unreal_model_id   text;
 alter table projects add column if not exists bim_file_url      text;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- ORG ISOLATION FOR PROJECTS
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+alter table projects add column if not exists org_id uuid references orgs(id) on delete cascade;

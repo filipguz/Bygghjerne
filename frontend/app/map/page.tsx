@@ -10,6 +10,7 @@ import ProjectStatusBadge from '@/components/ProjectStatusBadge'
 import ScoreCard from '@/components/ScoreCard'
 import { Project } from '@/types/projects'
 import { MOCK_PROJECTS } from '@/utils/mock-projects'
+import { apiFetch } from '@/utils/api'
 
 const LeafletMap = dynamic(() => import('@/components/LeafletMap'), { ssr: false })
 
@@ -40,7 +41,7 @@ export default function MapPage() {
   const [loading, setLoading]     = useState(true)
 
   useEffect(() => {
-    fetch('/api/backend/projects')
+    apiFetch('/projects')
       .then((r) => r.json())
       .then((data: Project[]) => {
         setProjects(data.length > 0 ? data : MOCK_PROJECTS)

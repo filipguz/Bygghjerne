@@ -102,6 +102,26 @@ def health():
 
 # ─── Projects ─────────────────────────────────────────────────────────────────
 
+VALID_PROJECT_STATUSES = {"mulighetsstudie", "regulering", "prosjektering", "salg"}
+
+
+def _get_project_org(project_id: str) -> str | None:
+    result = supabase_client.table("projects").select("org_id").eq("id", project_id).execute()
+    if not result.data:
+        return None
+    return result.data[0].get("org_id")
+
+
+def _assert_project_access(project_id: str, user_id: str) -> str:
+    org_id = _get_project_org(project_id)
+    if org_id is None:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    membership = supabase_client.table("org_members").select("id").eq("user_id", user_id).eq("org_id", org_id).execute()
+    if not membership.data:
+        raise HTTPException(status_code=403, detail="Ingen tilgang til dette prosjektet.")
+    return org_id
+
+
 class CreateProjectRequest(BaseModel):
     name: str
     location: str | None = None
@@ -121,8 +141,11 @@ class CreateProjectRequest(BaseModel):
 
 
 @app.get("/projects")
-def list_projects():
-    result = supabase_client.table("projects").select("*").order("name").execute()
+def list_projects(user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    if not org:
+        return []
+    result = supabase_client.table("projects").select("*").eq("org_id", org["id"]).order("name").execute()
     projects = result.data or []
     for p in projects:
         if p.get("lat") and p.get("lng"):
@@ -132,9 +155,18 @@ def list_projects():
 
 @app.post("/projects")
 def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
+    org = _get_user_org(user.id)
+    if not org:
+        raise HTTPException(status_code=403, detail="Du er ikke medlem av en organisasjon.")
+    if body.status not in VALID_PROJECT_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Ugyldig status. Gyldige verdier: {', '.join(VALID_PROJECT_STATUSES)}")
     payload = body.model_dump(exclude_none=True)
+    payload["org_id"] = org["id"]
     result = supabase_client.table("projects").insert(payload).execute()
-    return result.data[0] if result.data else {}
+    row = result.data[0] if result.data else {}
+    if row.get("lat") and row.get("lng"):
+        row["coordinates"] = [row["lat"], row["lng"]]
+    return row
 
 
 class UpdateProjectRequest(BaseModel):
@@ -157,10 +189,10 @@ class UpdateProjectRequest(BaseModel):
 
 @app.patch("/projects/{project_id}")
 def update_project(project_id: str, body: UpdateProjectRequest, user=Depends(get_current_user)):
-    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
-    patch = {k: v for k, v in body.model_dump().items() if v is not None}
+    _assert_project_access(project_id, user.id)
+    if body.status is not None and body.status not in VALID_PROJECT_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Ugyldig status. Gyldige verdier: {', '.join(VALID_PROJECT_STATUSES)}")
+    patch = body.model_dump(exclude_unset=True)
     if not patch:
         raise HTTPException(status_code=400, detail="Ingen felter å oppdatere.")
     updated = supabase_client.table("projects").update(patch).eq("id", project_id).execute()
@@ -172,15 +204,14 @@ def update_project(project_id: str, body: UpdateProjectRequest, user=Depends(get
 
 @app.delete("/projects/{project_id}")
 def delete_project(project_id: str, user=Depends(get_current_user)):
-    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    _assert_project_access(project_id, user.id)
     supabase_client.table("projects").delete().eq("id", project_id).execute()
     return {"deleted": project_id}
 
 
 @app.get("/projects/{project_id}")
-def get_project(project_id: str):
+def get_project(project_id: str, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
     result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
@@ -198,10 +229,8 @@ class UnrealStatusRequest(BaseModel):
 
 
 @app.post("/projects/{project_id}/unreal/status")
-def update_unreal_status(project_id: str, body: UnrealStatusRequest):
-    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+def update_unreal_status(project_id: str, body: UnrealStatusRequest, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
     url = body.stream_url if body.status == "ready" else None
     supabase_client.table("projects").update({"unreal_stream_url": url}).eq("id", project_id).execute()
     return {"project_id": project_id, "status": body.status, "unreal_stream_url": url}
@@ -213,15 +242,9 @@ class UnrealConfigRequest(BaseModel):
 
 
 @app.patch("/projects/{project_id}/unreal/config")
-def update_unreal_config(project_id: str, body: UnrealConfigRequest):
-    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
-    patch: dict = {}
-    if body.unreal_model_id is not None:
-        patch["unreal_model_id"] = body.unreal_model_id
-    if body.bim_file_url is not None:
-        patch["bim_file_url"] = body.bim_file_url
+def update_unreal_config(project_id: str, body: UnrealConfigRequest, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
+    patch = body.model_dump(exclude_unset=True)
     if patch:
         supabase_client.table("projects").update(patch).eq("id", project_id).execute()
     updated = supabase_client.table("projects").select("id, unreal_model_id, bim_file_url, unreal_stream_url").eq("id", project_id).execute()
@@ -229,7 +252,8 @@ def update_unreal_config(project_id: str, body: UnrealConfigRequest):
 
 
 @app.get("/projects/{project_id}/scene-params")
-def get_scene_params(project_id: str):
+def get_scene_params(project_id: str, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
     result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")

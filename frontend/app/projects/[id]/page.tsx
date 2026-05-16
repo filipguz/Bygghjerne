@@ -58,7 +58,7 @@ export default function ProjectDetailPage() {
   const [configSaved, setConfigSaved]           = useState(false)
 
   useEffect(() => {
-    fetch(`/api/backend/projects/${id}`)
+    apiFetch(`/projects/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error()
         return r.json()
@@ -85,7 +85,7 @@ export default function ProjectDetailPage() {
     if (activeTab !== '3d') return
     const interval = setInterval(async () => {
       try {
-        const data = await fetch(`/api/backend/projects/${id}`).then((r) => r.json())
+        const data = await apiFetch(`/projects/${id}`).then((r) => r.json())
         setProject((prev) => {
           if (!prev) return prev
           if (prev.unreal_stream_url !== data.unreal_stream_url) return { ...prev, unreal_stream_url: data.unreal_stream_url }
@@ -146,7 +146,7 @@ export default function ProjectDetailPage() {
       const res = await apiFetch('/upload', { method: 'POST', body: form })
       if (res.ok) {
         setUploadMsg('Dokument lastet opp.')
-        const updated = await fetch(`/api/backend/projects/${id}`).then((r) => r.json())
+        const updated = await apiFetch(`/projects/${id}`).then((r) => r.json())
         setProject(updated)
       } else {
         setUploadMsg('Opplasting feilet.')

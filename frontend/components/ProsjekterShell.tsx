@@ -11,6 +11,7 @@ import CommandPalette from '@/components/CommandPalette'
 import { Project } from '@/types/projects'
 import { MOCK_PROJECTS } from '@/utils/mock-projects'
 import { createClient } from '@/utils/supabase/client'
+import { apiFetch } from '@/utils/api'
 
 const STATUS_DOT: Record<string, string> = {
   mulighetsstudie: 'bg-violet-400',
@@ -36,7 +37,7 @@ export default function ProsjekterShell({ children }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
 
   useEffect(() => {
-    fetch('/api/backend/projects')
+    apiFetch('/projects')
       .then((r) => r.json())
       .then((data: Project[]) => setProjects(data.length > 0 ? data : MOCK_PROJECTS))
       .catch(() => setProjects(MOCK_PROJECTS))

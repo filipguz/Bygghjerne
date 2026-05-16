@@ -137,6 +137,48 @@ def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
     return result.data[0] if result.data else {}
 
 
+class UpdateProjectRequest(BaseModel):
+    name: str | None = None
+    location: str | None = None
+    address: str | None = None
+    status: str | None = None
+    bra_m2: int | None = None
+    units: int | None = None
+    floors: int | None = None
+    lat: float | None = None
+    lng: float | None = None
+    description: str | None = None
+    completion_year: int | None = None
+    investment_mnok: float | None = None
+    zoning_status: str | None = None
+    zoning_code: str | None = None
+    analysis: dict | None = None
+
+
+@app.patch("/projects/{project_id}")
+def update_project(project_id: str, body: UpdateProjectRequest, user=Depends(get_current_user)):
+    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    patch = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not patch:
+        raise HTTPException(status_code=400, detail="Ingen felter å oppdatere.")
+    updated = supabase_client.table("projects").update(patch).eq("id", project_id).execute()
+    row = updated.data[0] if updated.data else {}
+    if row.get("lat") and row.get("lng"):
+        row["coordinates"] = [row["lat"], row["lng"]]
+    return row
+
+
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: str, user=Depends(get_current_user)):
+    result = supabase_client.table("projects").select("id").eq("id", project_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
+    supabase_client.table("projects").delete().eq("id", project_id).execute()
+    return {"deleted": project_id}
+
+
 @app.get("/projects/{project_id}")
 def get_project(project_id: str):
     result = supabase_client.table("projects").select("*").eq("id", project_id).execute()

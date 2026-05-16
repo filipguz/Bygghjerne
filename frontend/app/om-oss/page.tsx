@@ -6,7 +6,7 @@ const founder = {
   name: "Filip Gustavsen",
   role: "Grunder & Utvikler",
   photo: "/profil1.jpeg",
-  bio: "Filip er selvlært utvikler med bakgrunn fra leirskole- og opplevelsesbransjen. Han vet hva det vil si å jobbe i felt med begrenset tid og ressurser — og bygger Bygghjerne slik at det faktisk fungerer for folk i den hverdagen.",
+  bio: "Filip er selvlært utvikler med bakgrunn fra eiendomsbransjen i Kristiansand-regionen. Han bygger Bygghjerne for å samle det som i dag er spredt over mange systemer — driftsdokumenter, vedlikehold, arbeidsordre og prosjektportefølje — på ett sted, med AI som gjør informasjonen søkbar på norsk.",
 };
 
 const roadmap = [
@@ -17,8 +17,8 @@ const roadmap = [
     items: [
       "Last opp driftsdokumenter som PDF",
       "AI-chat som svarer fra dine egne dokumenter",
-      "Norskspråklig søk og svar",
-      "Kildehenvisninger med relevansgrad",
+      "Norskspråklig søk og svar med kildehenvisninger",
+      "Isolert per bygg og organisasjon",
     ],
   },
   {
@@ -34,24 +34,36 @@ const roadmap = [
   },
   {
     phase: "Fase 3",
-    title: "Prosjektportefølje og kart",
+    title: "Prosjektportefølje og kartvisning",
     status: "live",
     items: [
-      "Porteføljeoversikt med prosjektstatus og nøkkeltall",
-      "Karttvisning av alle prosjekter",
-      "Prosjektdetaljside med analyse (sol, støy, flom, fjernvirkning)",
-      "Dokumentopplasting og AI-chat per prosjekt",
+      "Porteføljeoversikt med BRA, enheter og investeringsvolum",
+      "Kartvisning av alle prosjekter (Leaflet + fargekodet etter fase)",
+      "Analyser per prosjekt: sol, støy, flomrisiko og fjernvirkning",
+      "3D-prinsippmodell i nettleseren (Three.js, ingen plugins)",
+      "Finanskalkulator og dokumentarkiv per prosjekt",
     ],
   },
   {
     phase: "Fase 4",
+    title: "Unreal Engine / Pixel Streaming",
+    status: "live",
+    items: [
+      "Infrastruktur for live 3D-visualisering via Unreal Engine",
+      "Pixel Streaming direkte i nettleseren — ingen installasjon",
+      "Konfigurer stream-URL og BIM-modell per prosjekt",
+      "Automatisk fallback til Three.js-modell om stream ikke er aktiv",
+    ],
+  },
+  {
+    phase: "Fase 5",
     title: "Integrasjoner og automatisering",
     status: "planned",
     items: [
       "Støtte for Word og Excel i tillegg til PDF",
       "Automatiske påminnelser om vedlikeholdsfrister",
       "API mot BMS / SD-anlegg og FDV-systemer",
-      "Automatisk rapportgenerering",
+      "Automatisk rapportgenerering med AI",
     ],
   },
 ];
@@ -78,8 +90,9 @@ export default function OmOss() {
         <h1 className="text-4xl font-bold text-white mb-4">Ideen bak Bygghjerne</h1>
         <p className="text-lg leading-relaxed mb-4" style={{ color: "rgba(147,183,255,0.75)" }}>
           Bygghjerne er en samlet plattform for eiendomsforvaltere og eiendomsutviklere. Du får
-          AI-assistent som svarer fra dine egne dokumenter, et komplett vedlikeholdssystem (CMMS)
-          for arbeidsordre og eiendeler, og en prosjektportefølje med kartvisning og analyseverktøy.
+          AI-assistent som svarer fra dine egne dokumenter, et komplett vedlikeholdssystem (CMMS),
+          en prosjektportefølje med kartvisning og analyseverktøy — og støtte for live
+          3D-visualisering via Unreal Engine Pixel Streaming.
         </p>
         <p className="text-lg leading-relaxed" style={{ color: "rgba(147,183,255,0.75)" }}>
           Alt på norsk, alt på ett sted — uten å måtte bytte mellom fem forskjellige systemer.
@@ -87,8 +100,8 @@ export default function OmOss() {
       </section>
 
       {/* Feature overview */}
-      <section className="max-w-3xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <section className="max-w-4xl mx-auto px-6 pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             {
               icon: "💬",
@@ -103,7 +116,12 @@ export default function OmOss() {
             {
               icon: "🗺️",
               title: "Prosjektportefølje",
-              desc: "Hold oversikt over alle utviklingsprosjekter på ett kart. Analyser sol, støy og flomrisiko, og last opp dokumenter per prosjekt.",
+              desc: "Hold oversikt over alle utviklingsprosjekter på ett kart. Analyser sol, støy og flomrisiko per prosjekt med nøkkeltall og finanskalkulator.",
+            },
+            {
+              icon: "🎮",
+              title: "Unreal / 3D",
+              desc: "Live 3D-visualisering via Unreal Engine Pixel Streaming direkte i nettleseren. Faller tilbake til Three.js-modell om stream ikke er aktiv.",
             },
           ].map((f) => (
             <div key={f.title} className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
@@ -182,11 +200,11 @@ export default function OmOss() {
             Last opp driftsdokumentene dine og still ditt første spørsmål — det tar under ett minutt.
           </p>
           <Link
-            href="/assistent"
+            href="/login"
             className="inline-flex items-center gap-2 bg-coral-500 hover:bg-coral-600 text-white px-7 py-3.5 rounded-xl text-sm font-semibold transition-colors"
             style={{ boxShadow: "0 0 24px rgba(255,94,61,0.3)" }}
           >
-            Åpne Bygghjerne
+            Kom i gang gratis
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>

@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext'
 import { useCommandPalette } from '@/context/CommandPaletteContext'
 import CommandPalette from '@/components/CommandPalette'
 import { Project } from '@/types/projects'
+import { MOCK_PROJECTS } from '@/utils/mock-projects'
 
 const STATUS_DOT: Record<string, string> = {
   mulighetsstudie: 'bg-violet-400',
@@ -35,8 +36,8 @@ export default function ProsjekterShell({ children }: Props) {
   useEffect(() => {
     fetch('/api/backend/projects')
       .then((r) => r.json())
-      .then(setProjects)
-      .catch(() => {})
+      .then((data: Project[]) => setProjects(data.length > 0 ? data : MOCK_PROJECTS))
+      .catch(() => setProjects(MOCK_PROJECTS))
   }, [])
 
   function isActive(to: string) {

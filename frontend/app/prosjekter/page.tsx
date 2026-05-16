@@ -10,6 +10,7 @@ import InvestmentChart from '@/components/InvestmentChart'
 import RadarChart from '@/components/RadarChart'
 import ProjectActivityFeed from '@/components/ProjectActivityFeed'
 import { Project, ProjectStatus } from '@/types/projects'
+import { MOCK_PROJECTS } from '@/utils/mock-projects'
 
 const STEPS: ProjectStatus[] = ['mulighetsstudie', 'regulering', 'prosjektering', 'salg']
 const STEP_LABELS = ['Mulighetsstudie', 'Regulering', 'Prosjektering', 'Salg']
@@ -44,8 +45,11 @@ export default function ProjectsDashboard() {
   useEffect(() => {
     fetch('/api/backend/projects')
       .then((r) => r.json())
-      .then((data: Project[]) => { setProjects(data); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then((data: Project[]) => {
+        setProjects(data.length > 0 ? data : MOCK_PROJECTS)
+        setLoading(false)
+      })
+      .catch(() => { setProjects(MOCK_PROJECTS); setLoading(false) })
   }, [])
 
   const cities = ['alle', ...Array.from(new Set(projects.map((p) => p.location).filter(Boolean)))]

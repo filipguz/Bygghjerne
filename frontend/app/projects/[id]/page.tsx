@@ -16,6 +16,7 @@ import RadarChart from '@/components/RadarChart'
 import FinancialCalculator from '@/components/FinancialCalculator'
 import { Project } from '@/types/projects'
 import { apiFetch } from '@/utils/api'
+import { MOCK_PROJECTS } from '@/utils/mock-projects'
 
 const ThreeViewer = dynamic(() => import('@/components/ThreeViewer'), { ssr: false })
 const PixelStreamingViewer = dynamic(() => import('@/components/PixelStreamingViewer'), { ssr: false })
@@ -58,14 +59,21 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     fetch(`/api/backend/projects/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
       .then((data) => {
         setProject(data)
         setLoading(false)
         setUnrealModelId(data.unreal_model_id ?? '')
         setBimFileUrl(data.bim_file_url ?? '')
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        const mock = MOCK_PROJECTS.find((p) => p.id === id) ?? null
+        setProject(mock)
+        setLoading(false)
+      })
   }, [id])
 
   useEffect(() => {

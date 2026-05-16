@@ -83,6 +83,60 @@ const stack = [
     color: "bg-cyan-500/10 border-cyan-500/20",
     badge: "bg-cyan-500/20 text-cyan-300",
   },
+  {
+    name: "Next.js",
+    model: "v16 · App Router",
+    role: "Frontend",
+    description:
+      "Hele grensesnittet er bygget med Next.js App Router. Server Components, dynamiske importer og Tailwind CSS gir rask lastetid og en responsiv brukeropplevelse.",
+    color: "bg-slate-500/10 border-slate-500/20",
+    badge: "bg-slate-500/20 text-slate-300",
+  },
+  {
+    name: "Three.js",
+    model: "WebGL · r170",
+    role: "3D-visualisering",
+    description:
+      "Prosjektdetalj-siden viser en roterbar 3D-prinsippmodell av bygget generert fra prosjektdata (etasjer og BRA). Kjører direkte i nettleseren — ingen plugins.",
+    color: "bg-blue-500/10 border-blue-500/20",
+    badge: "bg-blue-500/20 text-blue-300",
+  },
+  {
+    name: "Leaflet",
+    model: "CartoDB dark tiles",
+    role: "Kartvisning",
+    description:
+      "Prosjektporteføljen vises på et interaktivt kart. Hvert prosjekt er fargekodet etter fase. Kartet tilpasser seg automatisk til prosjektenes koordinater.",
+    color: "bg-teal-500/10 border-teal-500/20",
+    badge: "bg-teal-500/20 text-teal-300",
+  },
+];
+
+const modules = [
+  {
+    tag: "Drift og forvaltning",
+    tagColor: "bg-cyan-500/20 text-cyan-300",
+    items: [
+      { title: "Dashboard", desc: "KPI-er per bygg: eiendeler, åpne arbeidsordre og forfalt vedlikehold — alt på ett blikk." },
+      { title: "Eiendelsregister", desc: "Registrer tekniske installasjoner med kategori, tilstand og vedlikeholdsplan. Tilstandstrend og AI-mønsteranalyse over tid." },
+      { title: "Arbeidsordre", desc: "Opprett og tildel oppgaver med prioritet (lav / medium / høy / kritisk), forfallsdato, ansvarlig og status." },
+      { title: "Tilstandsrapporter", desc: "Logg inspeksjoner og tilstandsvurderinger per eiendel for fullstendig historikk." },
+      { title: "AI-dokumentassistent", desc: "Last opp PDF-er og still spørsmål på norsk. Svar med kildehenvisninger fra dine egne dokumenter." },
+      { title: "Team og invitasjon", desc: "Multi-bygg per org. Administrer roller og inviter kollegaer via lenke med 7 dagers gyldighet." },
+    ],
+  },
+  {
+    tag: "Eiendomsutvikling",
+    tagColor: "bg-blue-500/20 text-blue-300",
+    items: [
+      { title: "Prosjektportefølje", desc: "Oversikt over alle prosjekter med KPI-er: total BRA, enheter, samlet investering og fase-fremgang." },
+      { title: "Analysescorer", desc: "Score per prosjekt for solforhold, støy, flomrisiko og fjernvirkning — synlig i liste, kart og radardiagram." },
+      { title: "Kartvisning", desc: "Interaktivt kart der hvert prosjekt er fargekodet etter fase. Klikk for analyser uten å forlate kartet." },
+      { title: "3D-bygningsmodell", desc: "Roterbar prinsippmodell i nettleseren basert på etasjer og BRA. Ingen plugins — ren WebGL via Three.js." },
+      { title: "Finanskalkulator", desc: "Beregn lønnsomhet med justerbare parametre for pris per kvm, byggekostnad, tomte­kostnad og avkastning." },
+      { title: "Søk og kommandopanel", desc: "Filtrer på status, by og fritekst. Åpne ⌘K for rask navigering mellom prosjekter." },
+    ],
+  },
 ];
 
 export default function Teknologi() {
@@ -142,17 +196,47 @@ export default function Teknologi() {
         </div>
       </section>
 
-      {/* Tech stack */}
+      {/* Modules */}
       <section className="py-16 px-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">Hva du kan gjøre</h2>
+          <p className="text-center mb-12 text-sm" style={{ color: "rgba(147,183,255,0.55)" }}>
+            To moduler — én plattform
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {modules.map((mod) => (
+              <div key={mod.tag}>
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${mod.tagColor} inline-block mb-5`}>
+                  {mod.tag}
+                </span>
+                <div className="flex flex-col gap-4">
+                  {mod.items.map((item) => (
+                    <div key={item.title} className="flex gap-3">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-coral-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-white mb-0.5">{item.title}</p>
+                        <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tech stack */}
+      <section className="bg-navy-900 py-16 px-6">
+        <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-2 text-center">Teknologistakken</h2>
           <p className="text-center mb-10 text-sm" style={{ color: "rgba(147,183,255,0.55)" }}>
             Verktøyene Bygghjerne er bygget på
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {stack.map((s) => (
-              <div key={s.name} className={`rounded-2xl border p-6 ${s.color}`}>
+              <div key={s.name} className={`rounded-2xl border p-5 ${s.color}`}>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
                     <p className="font-semibold text-white">{s.name}</p>
@@ -174,7 +258,7 @@ export default function Teknologi() {
       </section>
 
       {/* Security */}
-      <section className="bg-navy-900 py-16 px-6">
+      <section className="py-16 px-6">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-2 text-center">Sikkerhet og personvern</h2>
           <p className="text-center mb-10 text-sm" style={{ color: "rgba(147,183,255,0.55)" }}>

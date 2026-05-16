@@ -6,7 +6,7 @@ const founder = {
   name: "Filip Gustavsen",
   role: "Grunder & Utvikler",
   photo: "/profil1.jpeg",
-  bio: "Filip er selvlært utvikler med bakgrunn fra eiendomsbransjen i Kristiansand-regionen. Han bygger Bygghjerne for å samle det som i dag er spredt over mange systemer — driftsdokumenter, vedlikehold, arbeidsordre og prosjektportefølje — på ett sted, med AI som gjør informasjonen søkbar på norsk.",
+  bio: "Filip er selvlært utvikler med bakgrunn fra Kristiansand-regionen. Han bygger Bygghjerne for å samle det som i dag er spredt over mange systemer — driftsdokumenter, vedlikehold, arbeidsordre og prosjektportefølje — på ett sted, med AI som gjør informasjonen søkbar på norsk.",
 };
 
 const roadmap = [

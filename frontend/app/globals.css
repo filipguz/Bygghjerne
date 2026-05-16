@@ -15,19 +15,3 @@
   }
 }
 
-/* Neural network background animation */
-@keyframes nn-node {
-  0%, 100% { opacity: 0.2; }
-  50%       { opacity: 0.75; }
-}
-@keyframes nn-ring {
-  0%   { opacity: 0.55; transform: scale(1); }
-  100% { opacity: 0;    transform: scale(4.5); }
-}
-@keyframes nn-line {
-  0%, 100% { opacity: 0.06; }
-  50%       { opacity: 0.22; }
-}
-.nn-node { animation: nn-node ease-in-out infinite; }
-.nn-ring { animation: nn-ring ease-out  infinite; transform-box: fill-box; transform-origin: center; }
-.nn-line { animation: nn-line ease-in-out infinite; }

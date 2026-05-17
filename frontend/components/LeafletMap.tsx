@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Project } from '@/types/projects'
@@ -45,8 +45,9 @@ interface Props {
 }
 
 export default function LeafletMap({ projects, selected, onSelect }: Props) {
+  const mapKey = useRef(Math.random()).current
   return (
-    <MapContainer center={[58.3, 8.2]} zoom={8} style={{ width: '100%', height: '100%' }}>
+    <MapContainer key={mapKey} center={[58.3, 8.2]} zoom={8} style={{ width: '100%', height: '100%' }}>
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'

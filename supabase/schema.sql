@@ -411,3 +411,29 @@ alter table projects add column if not exists org_id uuid references orgs(id) on
 alter table projects enable row level security;
 create policy "deny direct client access to projects"
   on projects for all using (false);
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- BOLIGVELGER — units per project
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+create table if not exists units (
+  id              uuid primary key default gen_random_uuid(),
+  project_id      uuid not null references projects(id) on delete cascade,
+  unit_number     text not null,
+  floor           int  not null default 1,
+  bra_m2          float,
+  rooms           int,
+  price_nok       int,
+  status          text not null default 'ledig'
+    check (status in ('ledig', 'reservert', 'solgt')),
+  description     text,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+create index if not exists units_project_idx on units(project_id, floor, unit_number);
+
+alter table units enable row level security;
+create policy "deny direct client access to units"
+  on units for all using (false);

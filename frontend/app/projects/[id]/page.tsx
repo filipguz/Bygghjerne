@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, FileText, Sun, Volume2, Droplets, Eye,
   Upload, Send, Loader2, ChevronDown, ChevronUp, Settings2, Check,
-  Trash2, Bot,
+  Trash2, Bot, Plus, X,
 } from 'lucide-react'
 import ProsjekterShell from '@/components/ProsjekterShell'
 import ProjectStatusBadge from '@/components/ProjectStatusBadge'
@@ -21,6 +21,32 @@ import { MOCK_PROJECTS } from '@/utils/mock-projects'
 
 const ThreeViewer = dynamic(() => import('@/components/ThreeViewer'), { ssr: false })
 const PixelStreamingViewer = dynamic(() => import('@/components/PixelStreamingViewer'), { ssr: false })
+
+interface Unit {
+  id: string
+  project_id: string
+  unit_number: string
+  floor: number
+  bra_m2: number | null
+  rooms: number | null
+  price_nok: number | null
+  status: 'ledig' | 'reservert' | 'solgt'
+  description: string | null
+}
+
+interface UnitForm {
+  unit_number: string
+  floor: string
+  bra_m2: string
+  rooms: string
+  price_nok: string
+  status: 'ledig' | 'reservert' | 'solgt'
+  description: string
+}
+
+const EMPTY_UNIT_FORM: UnitForm = {
+  unit_number: '', floor: '1', bra_m2: '', rooms: '', price_nok: '', status: 'ledig', description: '',
+}
 
 interface EiendomData {
   kommunenavn?: string
@@ -81,7 +107,7 @@ export default function ProjectDetailPage() {
   const { id }                        = useParams<{ id: string }>()
   const [project, setProject]         = useState<Project | null>(null)
   const [loading, setLoading]         = useState(true)
-  const [activeTab, setActiveTab]     = useState<'oversikt' | 'analyse' | '3d' | 'chat' | 'dokumenter'>('oversikt')
+  const [activeTab, setActiveTab]     = useState<'oversikt' | 'analyse' | '3d' | 'chat' | 'dokumenter' | 'salg'>('oversikt')
   const [showCalc, setShowCalc]       = useState(false)
 
   // Chat state
@@ -98,6 +124,16 @@ export default function ProjectDetailPage() {
   const [dragging, setDragging]       = useState(false)
   const [deleting, setDeleting]       = useState<string | null>(null)
   const fileRef                       = useRef<HTMLInputElement>(null)
+
+  // Units / boligvelger state
+  const [units, setUnits]               = useState<Unit[]>([])
+  const [unitsLoading, setUnitsLoading] = useState(false)
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
+  const [showUnitModal, setShowUnitModal] = useState(false)
+  const [editingUnit, setEditingUnit]   = useState<Unit | null>(null)
+  const [unitForm, setUnitForm]         = useState<UnitForm>(EMPTY_UNIT_FORM)
+  const [unitSaving, setUnitSaving]     = useState(false)
+  const [unitDeleting, setUnitDeleting] = useState<string | null>(null)
 
   // Eiendomsdata state
   const [eiendom, setEiendom]       = useState<EiendomData | null>(null)
@@ -154,6 +190,71 @@ export default function ProjectDetailPage() {
       .catch(() => {})
       .finally(() => setEiendomLoading(false))
   }, [project?.coordinates])
+
+  useEffect(() => {
+    if (activeTab !== 'salg' || id.startsWith('mock-')) return
+    setUnitsLoading(true)
+    apiFetch(`/projects/${id}/units`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: Unit[]) => setUnits(data))
+      .catch(() => {})
+      .finally(() => setUnitsLoading(false))
+  }, [activeTab, id])
+
+  async function handleUnitSave(e: React.FormEvent) {
+    e.preventDefault()
+    setUnitSaving(true)
+    try {
+      const body = {
+        unit_number: unitForm.unit_number.trim(),
+        floor: parseInt(unitForm.floor) || 1,
+        status: unitForm.status,
+        ...(unitForm.bra_m2    && { bra_m2:    parseFloat(unitForm.bra_m2) }),
+        ...(unitForm.rooms     && { rooms:     parseInt(unitForm.rooms) }),
+        ...(unitForm.price_nok && { price_nok: parseInt(unitForm.price_nok.replace(/\s/g, '')) }),
+        ...(unitForm.description.trim() && { description: unitForm.description.trim() }),
+      }
+      if (editingUnit) {
+        const res = await apiFetch(`/units/${editingUnit.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const updated: Unit = await res.json()
+          setUnits((prev) => prev.map((u) => u.id === updated.id ? updated : u))
+          if (selectedUnit?.id === updated.id) setSelectedUnit(updated)
+        }
+      } else {
+        const res = await apiFetch(`/projects/${id}/units`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const created: Unit = await res.json()
+          setUnits((prev) => [...prev, created].sort((a, b) => a.floor - b.floor || a.unit_number.localeCompare(b.unit_number)))
+        }
+      }
+      setShowUnitModal(false)
+      setEditingUnit(null)
+      setUnitForm(EMPTY_UNIT_FORM)
+    } finally { setUnitSaving(false) }
+  }
+
+  async function handleUnitDelete(unitId: string) {
+    setUnitDeleting(unitId)
+    try {
+      await apiFetch(`/units/${unitId}`, { method: 'DELETE' })
+      setUnits((prev) => prev.filter((u) => u.id !== unitId))
+      if (selectedUnit?.id === unitId) setSelectedUnit(null)
+    } finally { setUnitDeleting(null) }
+  }
+
+  async function quickSetStatus(unit: Unit, status: Unit['status']) {
+    await apiFetch(`/units/${unit.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+    })
+    const updated = { ...unit, status }
+    setUnits((prev) => prev.map((u) => u.id === unit.id ? updated : u))
+    if (selectedUnit?.id === unit.id) setSelectedUnit(updated)
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -311,10 +412,12 @@ export default function ProjectDetailPage() {
   )
   const activeZoning = zoningIdx >= 0 ? zoningIdx : 0
 
+  const ledigCount   = units.filter((u) => u.status === 'ledig').length
   const TABS = [
     { id: 'oversikt',   label: 'Oversikt' },
     { id: 'analyse',    label: 'Analyse' },
     { id: '3d',         label: '3D-modell' },
+    { id: 'salg',       label: `Boligvelger${units.length > 0 ? ` · ${ledigCount} ledig` : ''}` },
     { id: 'chat',       label: 'Spør AI' },
     { id: 'dokumenter', label: `Dokumenter${docs.length > 0 ? ` (${docs.length})` : ''}` },
   ] as const
@@ -778,6 +881,267 @@ export default function ProjectDetailPage() {
                       <Send size={15} />
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* BOLIGVELGER */}
+              {activeTab === 'salg' && (
+                <div className="space-y-6">
+                  {/* Stats + add button */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {[
+                        { label: 'Totalt',     value: units.length,                                   cls: 'bg-slate-100 dark:bg-gray-800 text-slate-700 dark:text-gray-300' },
+                        { label: 'Ledig',      value: units.filter((u) => u.status === 'ledig').length,     cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' },
+                        { label: 'Reservert',  value: units.filter((u) => u.status === 'reservert').length, cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' },
+                        { label: 'Solgt',      value: units.filter((u) => u.status === 'solgt').length,     cls: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-500' },
+                      ].map(({ label, value, cls }) => (
+                        <div key={label} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${cls}`}>
+                          {value} {label}
+                        </div>
+                      ))}
+                      {units.some((u) => u.price_nok) && (
+                        <div className="text-xs text-slate-500 dark:text-gray-500">
+                          Prisleie {Math.min(...units.filter((u) => u.price_nok).map((u) => u.price_nok!)).toLocaleString('no')}
+                          {' – '}
+                          {Math.max(...units.filter((u) => u.price_nok).map((u) => u.price_nok!)).toLocaleString('no')} kr
+                        </div>
+                      )}
+                    </div>
+                    {!id.startsWith('mock-') && (
+                      <button
+                        onClick={() => { setEditingUnit(null); setUnitForm(EMPTY_UNIT_FORM); setShowUnitModal(true) }}
+                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
+                      >
+                        <Plus size={13} /> Legg til enhet
+                      </button>
+                    )}
+                  </div>
+
+                  {unitsLoading ? (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className="h-20 rounded-xl bg-slate-100 dark:bg-gray-800 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : units.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-gray-800 flex items-center justify-center text-slate-400 dark:text-gray-600 text-2xl">🏠</div>
+                      <p className="text-sm font-medium text-slate-600 dark:text-gray-400">Ingen enheter lagt til ennå</p>
+                      <p className="text-xs text-slate-400 dark:text-gray-600">Klikk «Legg til enhet» for å bygge opp boligvelgeren.</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-6">
+                      {/* Floor grid */}
+                      <div className="flex-1 space-y-4">
+                        {Array.from(new Set(units.map((u) => u.floor)))
+                          .sort((a, b) => b - a)
+                          .map((floor) => {
+                            const floorUnits = units.filter((u) => u.floor === floor)
+                            return (
+                              <div key={floor}>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">
+                                  {floor}. etasje
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {floorUnits.map((unit) => {
+                                    const isSelected = selectedUnit?.id === unit.id
+                                    const statusCls = {
+                                      ledig:     'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20',
+                                      reservert: 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20',
+                                      solgt:     'border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 opacity-60',
+                                    }[unit.status]
+                                    return (
+                                      <button
+                                        key={unit.id}
+                                        onClick={() => setSelectedUnit(isSelected ? null : unit)}
+                                        className={`relative rounded-xl border-2 p-3 text-left transition-all duration-150 w-24 ${statusCls} ${
+                                          isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-950' : 'hover:scale-105'
+                                        }`}
+                                      >
+                                        <p className="text-sm font-bold text-slate-800 dark:text-gray-200 leading-none">{unit.unit_number}</p>
+                                        {unit.bra_m2 && <p className="text-[10px] text-slate-500 dark:text-gray-500 mt-1">{unit.bra_m2} m²</p>}
+                                        {unit.rooms  && <p className="text-[10px] text-slate-500 dark:text-gray-500">{unit.rooms} rom</p>}
+                                        {unit.price_nok && (
+                                          <p className="text-[10px] font-semibold text-slate-700 dark:text-gray-300 mt-1">
+                                            {(unit.price_nok / 1_000_000).toFixed(1)} MNOK
+                                          </p>
+                                        )}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                      </div>
+
+                      {/* Selected unit detail panel */}
+                      <AnimatePresence>
+                        {selectedUnit && (
+                          <motion.div
+                            initial={{ opacity: 0, x: 16, width: 0 }}
+                            animate={{ opacity: 1, x: 0, width: 240 }}
+                            exit={{ opacity: 0, x: 16, width: 0 }}
+                            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                            className="flex-none overflow-hidden"
+                          >
+                            <div className="w-60 rounded-2xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="text-lg font-bold text-slate-900 dark:text-white">Enhet {selectedUnit.unit_number}</p>
+                                  <p className="text-xs text-slate-500 dark:text-gray-500">{selectedUnit.floor}. etasje</p>
+                                </div>
+                                <button onClick={() => setSelectedUnit(null)} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400">
+                                  <X size={14} />
+                                </button>
+                              </div>
+
+                              <div className="space-y-2 text-sm">
+                                {selectedUnit.bra_m2    && <div className="flex justify-between"><span className="text-slate-500 dark:text-gray-500">BRA</span><span className="font-medium text-slate-800 dark:text-gray-200">{selectedUnit.bra_m2} m²</span></div>}
+                                {selectedUnit.rooms     && <div className="flex justify-between"><span className="text-slate-500 dark:text-gray-500">Rom</span><span className="font-medium text-slate-800 dark:text-gray-200">{selectedUnit.rooms}</span></div>}
+                                {selectedUnit.price_nok && <div className="flex justify-between"><span className="text-slate-500 dark:text-gray-500">Pris</span><span className="font-semibold text-slate-900 dark:text-white">{selectedUnit.price_nok.toLocaleString('no')} kr</span></div>}
+                                {selectedUnit.description && <p className="text-xs text-slate-500 dark:text-gray-500 pt-1 border-t border-slate-100 dark:border-gray-800">{selectedUnit.description}</p>}
+                              </div>
+
+                              {/* Status quick-change */}
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">Status</p>
+                                <div className="flex gap-1.5 flex-wrap">
+                                  {(['ledig', 'reservert', 'solgt'] as const).map((s) => (
+                                    <button
+                                      key={s}
+                                      onClick={() => quickSetStatus(selectedUnit, s)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
+                                        selectedUnit.status === s
+                                          ? s === 'ledig'     ? 'bg-emerald-500 text-white'
+                                          : s === 'reservert' ? 'bg-amber-500 text-white'
+                                          :                     'bg-slate-500 text-white'
+                                          : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-500 hover:bg-slate-200 dark:hover:bg-gray-700'
+                                      }`}
+                                    >
+                                      {s}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {!id.startsWith('mock-') && (
+                                <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-gray-800">
+                                  <button
+                                    onClick={() => {
+                                      setEditingUnit(selectedUnit)
+                                      setUnitForm({
+                                        unit_number: selectedUnit.unit_number,
+                                        floor: String(selectedUnit.floor),
+                                        bra_m2: selectedUnit.bra_m2 != null ? String(selectedUnit.bra_m2) : '',
+                                        rooms: selectedUnit.rooms != null ? String(selectedUnit.rooms) : '',
+                                        price_nok: selectedUnit.price_nok != null ? String(selectedUnit.price_nok) : '',
+                                        status: selectedUnit.status,
+                                        description: selectedUnit.description ?? '',
+                                      })
+                                      setShowUnitModal(true)
+                                    }}
+                                    className="flex-1 text-xs py-1.5 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+                                  >
+                                    Rediger
+                                  </button>
+                                  <button
+                                    onClick={() => handleUnitDelete(selectedUnit.id)}
+                                    disabled={unitDeleting === selectedUnit.id}
+                                    className="px-3 text-xs py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Add/edit unit modal */}
+                  <AnimatePresence>
+                    {showUnitModal && (
+                      <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) { setShowUnitModal(false); setEditingUnit(null) } }}
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 12 }}
+                          transition={{ duration: 0.18 }}
+                          className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-2xl w-full max-w-md"
+                        >
+                          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-gray-800">
+                            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {editingUnit ? 'Rediger enhet' : 'Legg til enhet'}
+                            </h2>
+                            <button onClick={() => { setShowUnitModal(false); setEditingUnit(null) }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400">
+                              <X size={15} />
+                            </button>
+                          </div>
+                          <form onSubmit={handleUnitSave} className="p-5 grid grid-cols-2 gap-3">
+                            {[
+                              { label: 'Enhetsnummer *', key: 'unit_number', type: 'text',   placeholder: '1A' },
+                              { label: 'Etasje *',       key: 'floor',       type: 'number', placeholder: '1' },
+                              { label: 'BRA (m²)',       key: 'bra_m2',      type: 'number', placeholder: '65' },
+                              { label: 'Antall rom',     key: 'rooms',       type: 'number', placeholder: '3' },
+                              { label: 'Pris (kr)',      key: 'price_nok',   type: 'number', placeholder: '4500000' },
+                            ].map(({ label, key, type, placeholder }) => (
+                              <div key={key} className="flex flex-col gap-1">
+                                <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">{label}</label>
+                                <input
+                                  type={type}
+                                  min={type === 'number' ? 0 : undefined}
+                                  value={unitForm[key as keyof UnitForm] as string}
+                                  onChange={(e) => setUnitForm((f) => ({ ...f, [key]: e.target.value }))}
+                                  placeholder={placeholder}
+                                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                                />
+                              </div>
+                            ))}
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Status</label>
+                              <select
+                                value={unitForm.status}
+                                onChange={(e) => setUnitForm((f) => ({ ...f, status: e.target.value as Unit['status'] }))}
+                                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                              >
+                                <option value="ledig">Ledig</option>
+                                <option value="reservert">Reservert</option>
+                                <option value="solgt">Solgt</option>
+                              </select>
+                            </div>
+                            <div className="col-span-2 flex flex-col gap-1">
+                              <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Beskrivelse</label>
+                              <textarea
+                                value={unitForm.description}
+                                onChange={(e) => setUnitForm((f) => ({ ...f, description: e.target.value }))}
+                                placeholder="Valgfri beskrivelse av enheten…"
+                                rows={2}
+                                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-end gap-2 pt-1">
+                              <button type="button" onClick={() => { setShowUnitModal(false); setEditingUnit(null) }}
+                                className="px-4 py-2 text-sm text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                Avbryt
+                              </button>
+                              <button type="submit" disabled={unitSaving || !unitForm.unit_number.trim()}
+                                className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition-colors">
+                                {unitSaving ? 'Lagrer…' : editingUnit ? 'Oppdater' : 'Legg til'}
+                              </button>
+                            </div>
+                          </form>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 

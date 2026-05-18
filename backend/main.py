@@ -1758,3 +1758,78 @@ def kartverket_adresse(q: str, user=Depends(get_current_user)):
         return r.json()
     except Exception:
         raise HTTPException(status_code=502, detail="Kartverket ikke tilgjengelig.")
+
+
+# ─── Units (Boligvelger) ──────────────────────────────────────────────────────
+
+VALID_UNIT_STATUSES = {"ledig", "reservert", "solgt"}
+
+
+class CreateUnitRequest(BaseModel):
+    unit_number: str
+    floor: int = 1
+    bra_m2: float | None = None
+    rooms: int | None = None
+    price_nok: int | None = None
+    status: str = "ledig"
+    description: str | None = None
+
+
+class UpdateUnitRequest(BaseModel):
+    unit_number: str | None = None
+    floor: int | None = None
+    bra_m2: float | None = None
+    rooms: int | None = None
+    price_nok: int | None = None
+    status: str | None = None
+    description: str | None = None
+
+
+@app.get("/projects/{project_id}/units")
+def list_units(project_id: str, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
+    result = (
+        supabase_client.table("units")
+        .select("*")
+        .eq("project_id", project_id)
+        .order("floor")
+        .order("unit_number")
+        .execute()
+    )
+    return result.data or []
+
+
+@app.post("/projects/{project_id}/units")
+def create_unit(project_id: str, body: CreateUnitRequest, user=Depends(get_current_user)):
+    _assert_project_access(project_id, user.id)
+    if body.status not in VALID_UNIT_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Ugyldig status. Gyldige: {', '.join(VALID_UNIT_STATUSES)}")
+    payload = body.model_dump(exclude_none=True)
+    payload["project_id"] = project_id
+    result = supabase_client.table("units").insert(payload).execute()
+    return result.data[0] if result.data else {}
+
+
+@app.patch("/units/{unit_id}")
+def update_unit(unit_id: str, body: UpdateUnitRequest, user=Depends(get_current_user)):
+    unit = supabase_client.table("units").select("project_id").eq("id", unit_id).execute()
+    if not unit.data:
+        raise HTTPException(status_code=404, detail="Enhet ikke funnet.")
+    _assert_project_access(unit.data[0]["project_id"], user.id)
+    if body.status is not None and body.status not in VALID_UNIT_STATUSES:
+        raise HTTPException(status_code=422, detail="Ugyldig status.")
+    patch = body.model_dump(exclude_unset=True)
+    if not patch:
+        raise HTTPException(status_code=400, detail="Ingen felter å oppdatere.")
+    result = supabase_client.table("units").update(patch).eq("id", unit_id).execute()
+    return result.data[0] if result.data else {}
+
+
+@app.delete("/units/{unit_id}")
+def delete_unit(unit_id: str, user=Depends(get_current_user)):
+    unit = supabase_client.table("units").select("project_id").eq("id", unit_id).execute()
+    if not unit.data:
+        raise HTTPException(status_code=404, detail="Enhet ikke funnet.")
+    _assert_project_access(unit.data[0]["project_id"], user.id)
+    supabase_client.table("units").delete().eq("id", unit_id).execute()
+    return {"deleted": unit_id}

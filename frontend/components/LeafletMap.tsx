@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, WMSTileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Project } from '@/types/projects'
 
@@ -24,10 +24,7 @@ function FitProjects({ projects }: { projects: Project[] }) {
   const map = useMap()
   useEffect(() => {
     if (projects.length === 0) return
-    if (projects.length === 1) {
-      map.setView(projects[0].coordinates, 13)
-      return
-    }
+    if (projects.length === 1) { map.setView(projects[0].coordinates, 13); return }
     const lats = projects.map((p) => p.coordinates[0])
     const lngs = projects.map((p) => p.coordinates[1])
     map.fitBounds(
@@ -39,12 +36,13 @@ function FitProjects({ projects }: { projects: Project[] }) {
 }
 
 interface Props {
-  projects:  Project[]
-  selected:  Project | null
-  onSelect:  (p: Project | null) => void
+  projects:   Project[]
+  selected:   Project | null
+  onSelect:   (p: Project | null) => void
+  showPlans?: boolean
 }
 
-export default function LeafletMap({ projects, selected, onSelect }: Props) {
+export default function LeafletMap({ projects, selected, onSelect, showPlans = false }: Props) {
   const mapKey = useRef(Math.random()).current
   return (
     <MapContainer key={mapKey} center={[58.3, 8.2]} zoom={8} style={{ width: '100%', height: '100%' }}>
@@ -54,8 +52,22 @@ export default function LeafletMap({ projects, selected, onSelect }: Props) {
         subdomains="abcd"
         maxZoom={19}
       />
+
+      {showPlans && (
+        <WMSTileLayer
+          url="https://wms.geonorge.no/skwms1/wms.arealplaner2"
+          layers="reguleringsplanomrade"
+          format="image/png"
+          transparent
+          opacity={0.45}
+          version="1.3.0"
+          attribution='Reguleringsdata &copy; <a href="https://www.geonorge.no">Geonorge</a>'
+        />
+      )}
+
       <FitProjects projects={projects} />
       <FlyToProject project={selected} />
+
       {projects.map((p) => (
         <CircleMarker
           key={p.id}

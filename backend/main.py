@@ -1725,6 +1725,51 @@ def _tool_get_building_health_overview(building_id: str) -> list:
 KARTVERKET_TIMEOUT = 6.0
 
 
+@app.get("/kartverket/arealplan")
+def kartverket_arealplan(lat: float, lng: float, user=Depends(get_current_user)):
+    """Fetch regulatory plan data from Geonorge WFS arealplaner."""
+    delta_lat, delta_lng = 0.004, 0.006
+    bbox = f"{lng - delta_lng},{lat - delta_lat},{lng + delta_lng},{lat + delta_lat},urn:ogc:def:crs:EPSG::4326"
+    try:
+        with httpx.Client(timeout=8.0) as client:
+            r = client.get(
+                "https://wfs.geonorge.no/skwms1/wfs.arealplaner2",
+                params={
+                    "SERVICE": "WFS",
+                    "VERSION": "2.0.0",
+                    "REQUEST": "GetFeature",
+                    "typeNames": "app:arealplan",
+                    "BBOX": bbox,
+                    "outputFormat": "application/json",
+                    "count": "10",
+                },
+            )
+        if r.status_code != 200:
+            return {"plans": []}
+        data = r.json()
+        plans = []
+        for f in data.get("features", []):
+            p = f.get("properties", {})
+            plans.append({
+                "planidentifikasjon":   p.get("planidentifikasjon"),
+                "plannavn":             p.get("plannavn"),
+                "plantype":             p.get("plantype"),
+                "planstatus":           p.get("planstatus"),
+                "ikrafttredelsesdato":  p.get("ikrafttredelsesdato"),
+                "forslagsstillerstatus": p.get("forslagsstillerstatus"),
+                "kommunenavn":          p.get("kommunenavn"),
+                "lovreferanse":         p.get("lovreferanse"),
+            })
+        # Most relevant first: vedtatte detaljreguleringer
+        plans.sort(key=lambda x: (
+            0 if "detaljregulering" in (x.get("plantype") or "").lower() else
+            1 if "reguleringsplan" in (x.get("plantype") or "").lower() else 2
+        ))
+        return {"plans": plans}
+    except Exception:
+        raise HTTPException(status_code=502, detail="Geonorge ikke tilgjengelig.")
+
+
 @app.get("/kartverket/eiendom")
 def kartverket_eiendom(lat: float, lng: float, user=Depends(get_current_user)):
     """Lookup cadastral property data from Kartverket matrikkel API."""

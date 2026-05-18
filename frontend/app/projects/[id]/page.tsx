@@ -48,6 +48,17 @@ const EMPTY_UNIT_FORM: UnitForm = {
   unit_number: '', floor: '1', bra_m2: '', rooms: '', price_nok: '', status: 'ledig', description: '',
 }
 
+interface ArealplanItem {
+  planidentifikasjon: string | null
+  plannavn: string | null
+  plantype: string | null
+  planstatus: string | null
+  ikrafttredelsesdato: string | null
+  forslagsstillerstatus: string | null
+  kommunenavn: string | null
+  lovreferanse: string | null
+}
+
 interface EiendomData {
   kommunenavn?: string
   matrikkelenhetstype?: string
@@ -136,8 +147,10 @@ export default function ProjectDetailPage() {
   const [unitDeleting, setUnitDeleting] = useState<string | null>(null)
 
   // Eiendomsdata state
-  const [eiendom, setEiendom]       = useState<EiendomData | null>(null)
+  const [eiendom, setEiendom]             = useState<EiendomData | null>(null)
   const [eiendomLoading, setEiendomLoading] = useState(false)
+  const [arealplaner, setArealplaner]     = useState<ArealplanItem[]>([])
+  const [arealplanLoading, setArealplanLoading] = useState(false)
 
   // Unreal config state
   const [showUnrealConfig, setShowUnrealConfig] = useState(false)
@@ -184,11 +197,17 @@ export default function ProjectDetailPage() {
     if (!project?.coordinates) return
     const [lat, lng] = project.coordinates
     setEiendomLoading(true)
+    setArealplanLoading(true)
     apiFetch(`/kartverket/eiendom?lat=${lat}&lng=${lng}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => setEiendom(data && data.kommunenavn ? data : null))
       .catch(() => {})
       .finally(() => setEiendomLoading(false))
+    apiFetch(`/kartverket/arealplan?lat=${lat}&lng=${lng}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => setArealplaner(data?.plans ?? []))
+      .catch(() => {})
+      .finally(() => setArealplanLoading(false))
   }, [project?.coordinates])
 
   useEffect(() => {
@@ -541,6 +560,53 @@ export default function ProjectDetailPage() {
                               </p>
                             </div>
                           )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Arealplaner fra Geonorge */}
+                  {(arealplanLoading || arealplaner.length > 0) && (
+                    <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3 flex items-center gap-2">
+                        Reguleringsplaner
+                        <span className="text-[9px] bg-emerald-100 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold tracking-normal normal-case">Geonorge</span>
+                      </h3>
+                      {arealplanLoading ? (
+                        <div className="space-y-2">
+                          {[1, 2].map((i) => <div key={i} className="h-12 rounded-lg bg-slate-200 dark:bg-gray-700 animate-pulse" />)}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {arealplaner.map((plan, i) => (
+                            <div key={i} className="rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 px-3 py-3">
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-gray-200 leading-snug">
+                                  {plan.plannavn ?? plan.planidentifikasjon ?? 'Ukjent plan'}
+                                </p>
+                                {plan.planstatus && (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                    plan.planstatus.toLowerCase().includes('vedtatt')
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                      : plan.planstatus.toLowerCase().includes('behandling')
+                                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                                        : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-500'
+                                  }`}>
+                                    {plan.planstatus}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-gray-500">
+                                {plan.plantype            && <span>{plan.plantype}</span>}
+                                {plan.planidentifikasjon  && <span className="font-mono">{plan.planidentifikasjon}</span>}
+                                {plan.ikrafttredelsesdato && <span>Vedtatt {plan.ikrafttredelsesdato.slice(0, 10)}</span>}
+                                {plan.kommunenavn         && <span>{plan.kommunenavn}</span>}
+                              </div>
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-slate-400 dark:text-gray-600 pt-1">
+                            Kilde: Geonorge arealplaner — viser planer innenfor ~500 m fra koordinat
+                          </p>
                         </div>
                       )}
                     </div>

@@ -38,6 +38,7 @@ export default function MapPage() {
   const [projects, setProjects]   = useState<Project[]>([])
   const [selected, setSelected]   = useState<Project | null>(null)
   const [loading, setLoading]     = useState(true)
+  const [showPlans, setShowPlans] = useState(false)
 
   useEffect(() => {
     apiFetch('/projects')
@@ -162,8 +163,22 @@ export default function MapPage() {
               projects={projects}
               selected={selected}
               onSelect={setSelected}
+              showPlans={showPlans}
             />
           )}
+
+          {/* Reguleringsplan toggle */}
+          <button
+            onClick={() => setShowPlans((v) => !v)}
+            className={`absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl border shadow-lg text-xs font-medium transition-all backdrop-blur-sm ${
+              showPlans
+                ? 'bg-blue-600 border-blue-500 text-white'
+                : 'bg-white/90 dark:bg-gray-900/90 border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-600'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-sm ${showPlans ? 'bg-white/80' : 'bg-amber-400'}`} />
+            Reguleringsplaner
+          </button>
 
           {/* Legend */}
           <div className="absolute bottom-4 right-4 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-gray-700 px-3 py-2.5 shadow-lg">

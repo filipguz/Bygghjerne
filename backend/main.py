@@ -1767,7 +1767,7 @@ def kartverket_arealplan(lat: float, lng: float, user=Depends(get_current_user))
         ))
         return {"plans": plans}
     except Exception:
-        raise HTTPException(status_code=502, detail="Geonorge ikke tilgjengelig.")
+        return {"plans": []}
 
 
 @app.get("/kartverket/eiendom")

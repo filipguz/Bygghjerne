@@ -52,7 +52,7 @@ export default function MapPage() {
     : []
 
   return (
-    <ProsjekterShell>
+    <ProsjekterShell mainOverflow="hidden">
       <div className="flex h-full overflow-hidden">
         {/* Left sidebar */}
         <aside className="w-72 flex-none flex flex-col bg-white dark:bg-gray-900 border-r border-slate-200 dark:border-gray-800 overflow-hidden">

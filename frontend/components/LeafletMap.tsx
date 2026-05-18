@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, WMSTileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
 import { Project } from '@/types/projects'
 
 const STATUS_COLORS: Record<string, string> = {

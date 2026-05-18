@@ -26,9 +26,10 @@ const navItems = [
 
 interface Props {
   children: React.ReactNode
+  mainOverflow?: 'auto' | 'hidden'
 }
 
-export default function ProsjekterShell({ children }: Props) {
+export default function ProsjekterShell({ children, mainOverflow = 'auto' }: Props) {
   const pathname  = usePathname()
   const router    = useRouter()
   const { theme, toggle } = useTheme()
@@ -186,7 +187,7 @@ export default function ProsjekterShell({ children }: Props) {
       </header>
 
       {/* ── Page content ──────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto pt-14 md:pt-0 pb-16 md:pb-0">
+      <main className={`flex-1 pt-14 md:pt-0 pb-16 md:pb-0 ${mainOverflow === 'hidden' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}

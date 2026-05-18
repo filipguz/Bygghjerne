@@ -4,6 +4,7 @@ import os
 from datetime import date, datetime, timedelta, timezone
 
 import anthropic
+import httpx
 import voyageai
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -1717,3 +1718,43 @@ def _tool_get_building_health_overview(building_id: str) -> list:
         })
     result.sort(key=lambda x: (x["latest_condition_score"] or 99))
     return result
+
+
+# ─── Kartverket ───────────────────────────────────────────────────────────────
+
+KARTVERKET_TIMEOUT = 6.0
+
+
+@app.get("/kartverket/eiendom")
+def kartverket_eiendom(lat: float, lng: float, user=Depends(get_current_user)):
+    """Lookup cadastral property data from Kartverket matrikkel API."""
+    try:
+        with httpx.Client(timeout=KARTVERKET_TIMEOUT) as client:
+            r = client.get(
+                "https://ws.geonorge.no/eiendom/v1/punkt",
+                params={"nord": lat, "ost": lng, "koordsys": "4258"},
+            )
+        if r.status_code != 200:
+            return {}
+        data = r.json()
+        return data[0] if isinstance(data, list) and data else {}
+    except Exception:
+        raise HTTPException(status_code=502, detail="Kartverket ikke tilgjengelig.")
+
+
+@app.get("/kartverket/adresse")
+def kartverket_adresse(q: str, user=Depends(get_current_user)):
+    """Search Norwegian addresses via Kartverket adresse API."""
+    if len(q.strip()) < 3:
+        return {"adresser": []}
+    try:
+        with httpx.Client(timeout=KARTVERKET_TIMEOUT) as client:
+            r = client.get(
+                "https://ws.geonorge.no/adresser/v1/sok",
+                params={"sok": q, "treffPerSide": 6, "utkoordsys": "4258"},
+            )
+        if r.status_code != 200:
+            return {"adresser": []}
+        return r.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Kartverket ikke tilgjengelig.")

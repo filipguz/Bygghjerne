@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { MapPin, Building2, Layers, TrendingUp, ArrowRight, Calendar, Search, Plus, X, Trash2 } from 'lucide-react'
@@ -11,6 +11,9 @@ import RadarChart from '@/components/RadarChart'
 import ProjectActivityFeed from '@/components/ProjectActivityFeed'
 import { Project, ProjectStatus } from '@/types/projects'
 import { apiFetch } from '@/utils/api'
+
+interface AdresseSuggestion { tekst: string; kommunenavn: string; lat: number | null; lng: number | null }
+interface KartverketAdresse { adressetekst: string; poststed: string; kommunenavn: string; representasjonspunkt?: { lat: number; lon: number } }
 
 const STEPS: ProjectStatus[] = ['mulighetsstudie', 'regulering', 'prosjektering', 'salg']
 const STEP_LABELS = ['Mulighetsstudie', 'Regulering', 'Prosjektering', 'Salg']
@@ -78,6 +81,52 @@ export default function ProjectsDashboard() {
   const [saving, setSaving]                   = useState(false)
   const [formError, setFormError]             = useState('')
   const [deletingId, setDeletingId]           = useState<string | null>(null)
+  const [adresseSuggestions, setAdresseSuggestions] = useState<AdresseSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions]       = useState(false)
+  const adresseDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const adresseRef      = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (adresseRef.current && !adresseRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function onAdresseInput(value: string) {
+    setForm((f) => ({ ...f, address: value }))
+    if (adresseDebounce.current) clearTimeout(adresseDebounce.current)
+    if (value.trim().length < 3) { setAdresseSuggestions([]); setShowSuggestions(false); return }
+    adresseDebounce.current = setTimeout(async () => {
+      try {
+        const res = await apiFetch(`/kartverket/adresse?q=${encodeURIComponent(value)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const hits: AdresseSuggestion[] = (data.adresser ?? []).map((a: KartverketAdresse) => ({
+          tekst: `${a.adressetekst}, ${a.poststed}`,
+          kommunenavn: a.kommunenavn,
+          lat: a.representasjonspunkt?.lat ?? null,
+          lng: a.representasjonspunkt?.lon ?? null,
+        }))
+        setAdresseSuggestions(hits)
+        setShowSuggestions(hits.length > 0)
+      } catch { /* ignore */ }
+    }, 300)
+  }
+
+  function pickAdresse(s: AdresseSuggestion) {
+    setForm((f) => ({
+      ...f,
+      address: s.tekst,
+      location: f.location || s.kommunenavn,
+      lat:  s.lat  !== null ? String(s.lat)  : f.lat,
+      lng:  s.lng  !== null ? String(s.lng)  : f.lng,
+    }))
+    setShowSuggestions(false)
+  }
 
   const loadProjects = () => {
     setLoading(true)
@@ -456,12 +505,40 @@ export default function ProjectsDashboard() {
                     />
                   ))}
                   {field('Adresse', (
-                    <input
-                      value={form.address}
-                      onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                      placeholder="f.eks. Markens gate 14"
-                      className={inputCls}
-                    />
+                    <div ref={adresseRef} className="relative">
+                      <input
+                        value={form.address}
+                        onChange={(e) => onAdresseInput(e.target.value)}
+                        onFocus={() => adresseSuggestions.length > 0 && setShowSuggestions(true)}
+                        placeholder="Søk adresse… (henter koordinater automatisk)"
+                        className={inputCls}
+                        autoComplete="off"
+                      />
+                      <AnimatePresence>
+                        {showSuggestions && (
+                          <motion.ul
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.12 }}
+                            className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden"
+                          >
+                            {adresseSuggestions.map((s, i) => (
+                              <li key={i}>
+                                <button
+                                  type="button"
+                                  onMouseDown={() => pickAdresse(s)}
+                                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-600/15 transition-colors"
+                                >
+                                  <span className="text-slate-800 dark:text-gray-200">{s.tekst}</span>
+                                  <span className="text-xs text-slate-400 dark:text-gray-600 ml-2">{s.kommunenavn}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   ))}
                   {field('BRA (m²)', (
                     <input

@@ -22,6 +22,18 @@ import { MOCK_PROJECTS } from '@/utils/mock-projects'
 const ThreeViewer = dynamic(() => import('@/components/ThreeViewer'), { ssr: false })
 const PixelStreamingViewer = dynamic(() => import('@/components/PixelStreamingViewer'), { ssr: false })
 
+interface EiendomData {
+  kommunenavn?: string
+  matrikkelenhetstype?: string
+  areal?: number
+  matrikkelnummer?: {
+    kommunenummer: string
+    gaardsnummer: number
+    bruksnummer: number
+    festenummer?: number
+  }
+}
+
 const ANALYSIS_ICONS: Record<string, React.ReactNode> = {
   sol:           <Sun size={14} />,
   støy:          <Volume2 size={14} />,
@@ -87,6 +99,10 @@ export default function ProjectDetailPage() {
   const [deleting, setDeleting]       = useState<string | null>(null)
   const fileRef                       = useRef<HTMLInputElement>(null)
 
+  // Eiendomsdata state
+  const [eiendom, setEiendom]       = useState<EiendomData | null>(null)
+  const [eiendomLoading, setEiendomLoading] = useState(false)
+
   // Unreal config state
   const [showUnrealConfig, setShowUnrealConfig] = useState(false)
   const [unrealModelId, setUnrealModelId]       = useState('')
@@ -127,6 +143,17 @@ export default function ProjectDetailPage() {
   }, [id])
 
   useEffect(() => { fetchDocs() }, [fetchDocs])
+
+  useEffect(() => {
+    if (!project?.coordinates) return
+    const [lat, lng] = project.coordinates
+    setEiendomLoading(true)
+    apiFetch(`/kartverket/eiendom?lat=${lat}&lng=${lng}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => setEiendom(data && data.kommunenavn ? data : null))
+      .catch(() => {})
+      .finally(() => setEiendomLoading(false))
+  }, [project?.coordinates])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -361,6 +388,58 @@ export default function ProjectDetailPage() {
                     <div>
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-2">Beskrivelse</h3>
                       <p className="text-sm text-slate-700 dark:text-gray-300 leading-relaxed">{project.description}</p>
+                    </div>
+                  )}
+
+                  {/* Eiendomsdata fra Kartverket */}
+                  {(eiendomLoading || eiendom) && (
+                    <div className="rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-3 flex items-center gap-2">
+                        Eiendomsdata
+                        <span className="text-[9px] bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-semibold tracking-normal normal-case">Kartverket</span>
+                      </h3>
+                      {eiendomLoading ? (
+                        <div className="flex gap-3">
+                          {[1,2,3].map((i) => <div key={i} className="h-10 flex-1 rounded-lg bg-slate-200 dark:bg-gray-700 animate-pulse" />)}
+                        </div>
+                      ) : eiendom && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {eiendom.kommunenavn && (
+                            <div className="rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 px-3 py-2.5">
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-0.5">Kommune</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-gray-200">{eiendom.kommunenavn}</p>
+                            </div>
+                          )}
+                          {eiendom.matrikkelnummer && (
+                            <div className="rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 px-3 py-2.5">
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-0.5">Matrikkelnummer</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-gray-200 font-mono">
+                                {eiendom.matrikkelnummer.gaardsnummer}/{eiendom.matrikkelnummer.bruksnummer}
+                                {eiendom.matrikkelnummer.festenummer ? `/${eiendom.matrikkelnummer.festenummer}` : ''}
+                              </p>
+                            </div>
+                          )}
+                          {eiendom.matrikkelenhetstype && (
+                            <div className="rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 px-3 py-2.5">
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-0.5">Type</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-gray-200">{eiendom.matrikkelenhetstype}</p>
+                            </div>
+                          )}
+                          {eiendom.areal && (
+                            <div className="rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 px-3 py-2.5">
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-600 mb-0.5">Tomteareal</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-gray-200">{eiendom.areal.toLocaleString('no')} m²</p>
+                            </div>
+                          )}
+                          {eiendom.matrikkelnummer && (
+                            <div className="col-span-full">
+                              <p className="text-[10px] text-slate-400 dark:text-gray-600">
+                                Knr. {eiendom.matrikkelnummer.kommunenummer} · Kilde: Kartverket matrikkel-API
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

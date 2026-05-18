@@ -407,3 +407,7 @@ alter table projects add column if not exists bim_file_url      text;
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 alter table projects add column if not exists org_id uuid references orgs(id) on delete cascade;
+
+alter table projects enable row level security;
+create policy "deny direct client access to projects"
+  on projects for all using (false);

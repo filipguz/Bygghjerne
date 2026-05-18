@@ -97,6 +97,12 @@ export default function ProjectDetailPage() {
   const [savingStream, setSavingStream]         = useState(false)
 
   useEffect(() => {
+    if (id.startsWith('mock-')) {
+      const mock = MOCK_PROJECTS.find((p) => p.id === id) ?? null
+      setProject(mock)
+      setLoading(false)
+      return
+    }
     apiFetch(`/projects/${id}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
@@ -106,8 +112,7 @@ export default function ProjectDetailPage() {
         setBimFileUrl(data.bim_file_url ?? '')
       })
       .catch(() => {
-        const mock = MOCK_PROJECTS.find((p) => p.id === id) ?? null
-        setProject(mock)
+        setProject(null)
         setLoading(false)
       })
   }, [id])

@@ -10,7 +10,6 @@ import InvestmentChart from '@/components/InvestmentChart'
 import RadarChart from '@/components/RadarChart'
 import ProjectActivityFeed from '@/components/ProjectActivityFeed'
 import { Project, ProjectStatus } from '@/types/projects'
-import { MOCK_PROJECTS } from '@/utils/mock-projects'
 import { apiFetch } from '@/utils/api'
 
 const STEPS: ProjectStatus[] = ['mulighetsstudie', 'regulering', 'prosjektering', 'salg']
@@ -68,7 +67,7 @@ const cardVariants: Variants = { hidden: {}, show: { transition: { staggerChildr
 export default function ProjectsDashboard() {
   const [projects, setProjects]               = useState<Project[]>([])
   const [loading, setLoading]                 = useState(true)
-  const [usingMock, setUsingMock]             = useState(false)
+  const [fetchError, setFetchError]           = useState(false)
   const [statusFilter, setStatusFilter]       = useState<ProjectStatus | 'alle'>('alle')
   const [cityFilter, setCityFilter]           = useState('alle')
   const [search, setSearch]                   = useState('')
@@ -82,19 +81,11 @@ export default function ProjectsDashboard() {
 
   const loadProjects = () => {
     setLoading(true)
+    setFetchError(false)
     apiFetch('/projects')
       .then((r) => r.json())
-      .then((data: Project[]) => {
-        if (data.length > 0) {
-          setProjects(data)
-          setUsingMock(false)
-        } else {
-          setProjects(MOCK_PROJECTS)
-          setUsingMock(true)
-        }
-        setLoading(false)
-      })
-      .catch(() => { setProjects(MOCK_PROJECTS); setUsingMock(true); setLoading(false) })
+      .then((data: Project[]) => { setProjects(data); setLoading(false) })
+      .catch(() => { setFetchError(true); setLoading(false) })
   }
 
   useEffect(() => { loadProjects() }, [])
@@ -163,7 +154,6 @@ export default function ProjectsDashboard() {
   }
 
   const handleDelete = async (id: string) => {
-    if (usingMock) return
     setDeletingId(id)
     try {
       await apiFetch(`/projects/${id}`, { method: 'DELETE' })
@@ -195,7 +185,7 @@ export default function ProjectsDashboard() {
                 Prosjektoversikt
               </motion.h1>
               <motion.p variants={kpiItem} className="text-sm text-slate-500 dark:text-gray-500 mt-1">
-                {loading ? 'Laster…' : usingMock ? 'Viser eksempeldata — ingen prosjekter i databasen ennå' : `${projects.length} aktive prosjekter`}
+                {loading ? 'Laster…' : fetchError ? 'Kunne ikke laste prosjekter' : `${projects.length} aktive prosjekter`}
               </motion.p>
             </div>
             <motion.button
@@ -269,13 +259,28 @@ export default function ProjectsDashboard() {
                 initial="hidden" animate="show" variants={cardVariants}
                 className="grid grid-cols-1 md:grid-cols-2 gap-4"
               >
-                {filtered.length === 0 ? (
+                {projects.length === 0 && !loading ? (
+                  <motion.div variants={fadeUp} className="col-span-2 flex flex-col items-center justify-center py-20 text-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 dark:text-blue-400">
+                      <Building2 size={26} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-gray-300">Ingen prosjekter ennå</p>
+                      <p className="text-xs text-slate-400 dark:text-gray-600 mt-1">Opprett ditt første prosjekt for å komme i gang.</p>
+                    </div>
+                    <button
+                      onClick={() => { setShowModal(true); setForm(EMPTY_FORM); setFormError('') }}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Plus size={15} /> Nytt prosjekt
+                    </button>
+                  </motion.div>
+                ) : filtered.length === 0 ? (
                   <motion.p variants={fadeUp} className="col-span-2 text-sm text-slate-400 dark:text-gray-600 py-8 text-center">
                     Ingen prosjekter matcher filteret.
                   </motion.p>
                 ) : filtered.map((p) => {
                   const stepIdx = STEPS.indexOf(p.status)
-                  const isMock = p.id.startsWith('mock-')
                   return (
                     <motion.div
                       key={p.id}
@@ -297,15 +302,13 @@ export default function ProjectsDashboard() {
                           </div>
                           <div className="flex items-center gap-2">
                             <ProjectStatusBadge status={p.status} />
-                            {!isMock && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(p.id) }}
-                                disabled={deletingId === p.id}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(p.id) }}
+                              disabled={deletingId === p.id}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </div>
 

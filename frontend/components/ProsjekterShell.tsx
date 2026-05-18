@@ -9,7 +9,6 @@ import { useTheme } from '@/context/ThemeContext'
 import { useCommandPalette } from '@/context/CommandPaletteContext'
 import CommandPalette from '@/components/CommandPalette'
 import { Project } from '@/types/projects'
-import { MOCK_PROJECTS } from '@/utils/mock-projects'
 import { createClient } from '@/utils/supabase/client'
 import { apiFetch } from '@/utils/api'
 
@@ -39,8 +38,8 @@ export default function ProsjekterShell({ children }: Props) {
   useEffect(() => {
     apiFetch('/projects')
       .then((r) => r.json())
-      .then((data: Project[]) => setProjects(data.length > 0 ? data : MOCK_PROJECTS))
-      .catch(() => setProjects(MOCK_PROJECTS))
+      .then((data: Project[]) => setProjects(data))
+      .catch(() => {})
   }, [])
 
   async function handleLogout() {

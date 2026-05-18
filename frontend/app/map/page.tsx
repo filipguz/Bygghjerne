@@ -9,7 +9,6 @@ import ProsjekterShell from '@/components/ProsjekterShell'
 import ProjectStatusBadge from '@/components/ProjectStatusBadge'
 import ScoreCard from '@/components/ScoreCard'
 import { Project } from '@/types/projects'
-import { MOCK_PROJECTS } from '@/utils/mock-projects'
 import { apiFetch } from '@/utils/api'
 
 const LeafletMap = dynamic(() => import('@/components/LeafletMap'), { ssr: false })
@@ -43,11 +42,8 @@ export default function MapPage() {
   useEffect(() => {
     apiFetch('/projects')
       .then((r) => r.json())
-      .then((data: Project[]) => {
-        setProjects(data.length > 0 ? data : MOCK_PROJECTS)
-        setLoading(false)
-      })
-      .catch(() => { setProjects(MOCK_PROJECTS); setLoading(false) })
+      .then((data: Project[]) => { setProjects(data); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
 
   const analysisKeys = selected?.analysis

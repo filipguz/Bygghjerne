@@ -227,7 +227,7 @@ export default function ProjectsDashboard() {
     <ProsjekterShell>
       <div className="flex h-full overflow-hidden">
         {/* Main column */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
           <motion.div initial="hidden" animate="show" variants={kpiVariants} className="flex items-start justify-between mb-8">
             <div>
               <motion.h1 variants={kpiItem} className="text-2xl font-bold text-slate-900 dark:text-white">

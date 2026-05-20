@@ -515,7 +515,7 @@ export default function ProjectDetailPage() {
     <ProsjekterShell>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex-none px-8 pt-6 pb-4 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex-none px-4 sm:px-8 pt-6 pb-4 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <Link href="/prosjekter" className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-600 hover:text-slate-600 dark:hover:text-gray-400 mb-3 transition-colors">
             <ArrowLeft size={13} />
             Prosjektoversikt
@@ -538,7 +538,7 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* BIM stats */}
-          <div className="grid grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
             {[
               { label: 'BRA',       value: `${(project.bra_m2 ?? 0).toLocaleString('no')} m²` },
               { label: 'Enheter',   value: project.units ?? '—' },
@@ -579,7 +579,7 @@ export default function ProjectDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-              className="p-8"
+              className="p-4 sm:p-8"
             >
 
               {/* OVERSIKT */}

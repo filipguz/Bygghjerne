@@ -89,7 +89,7 @@ export default function FinancialCalculator({ project }: Props) {
             className="overflow-hidden"
           >
             <div className="border-t border-slate-100 dark:border-gray-800 p-5">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-600">Forutsetninger</p>
                   <SliderRow label="Salgspris" unit="kr/m²" value={sp} min={25000} max={150000} step={1000} onChange={setSp} display={fmt(sp)} />

@@ -27,7 +27,7 @@ function polarPoint(angle: number, radius: number) {
 
 function buildPolygon(p: Project): string {
   return AXES.map(({ key, angle }) => {
-    const s = (p.analysis?.[key]?.score ?? 50) / 100
+    const s = (p.analysis?.[key]?.score ?? 0) / 100
     const pt = polarPoint(angle, s * R)
     return `${pt.x},${pt.y}`
   }).join(' ')

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Sun, Moon, Home, LogOut, User } from "lucide-react";
+import { Sun, Moon, Home, LogOut, User, Settings } from "lucide-react";
 import BackendWakeup from "@/components/BackendWakeup";
 import { apiFetch } from "@/utils/api";
 import { useBuilding } from "@/utils/building-context";
@@ -172,23 +172,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="px-3 pb-1">
-            <Link
-              href="/innstillinger"
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/innstillinger")
-                  ? "bg-brand-50 dark:bg-blue-600/20 text-brand-700 dark:text-blue-400"
-                  : "text-slate-500 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300"
-              }`}
-            >
-              <svg className={`h-4 w-4 ${isActive("/innstillinger") ? "text-brand-500 dark:text-blue-400" : "text-slate-400 dark:text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Team
-            </Link>
-          </div>
-
           {/* Bytt modul */}
           <div className="px-4 py-3 border-t border-slate-100 dark:border-gray-800">
             <Link
@@ -229,6 +212,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               Min profil
             </Link>
 
+            <Link
+              href="/innstillinger"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                isActive('/innstillinger')
+                  ? 'bg-brand-50 dark:bg-blue-600/20 text-brand-700 dark:text-blue-400'
+                  : 'text-slate-500 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Settings size={14} />
+              Innstillinger
+            </Link>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -264,6 +259,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
             </button>
+            <Link
+              href="/innstillinger"
+              className={`p-2 transition-colors ${
+                isActive('/innstillinger')
+                  ? 'text-brand-600 dark:text-blue-400'
+                  : 'text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+              aria-label="Innstillinger"
+            >
+              <Settings size={18} />
+            </Link>
             <button
               onClick={handleLogout}
               className="p-2 text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"

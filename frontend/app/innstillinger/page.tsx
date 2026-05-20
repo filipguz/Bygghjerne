@@ -142,8 +142,8 @@ export default function Innstillinger() {
     <AppShell>
       <div className="flex-1 overflow-auto">
         {/* Header */}
-        <div className="flex items-center px-4 md:px-6 py-4 bg-white border-b border-slate-200 shrink-0">
-          <h1 className="text-lg font-bold text-slate-900">Innstillinger</h1>
+        <div className="flex items-center px-4 md:px-6 py-4 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 shrink-0">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Innstillinger</h1>
         </div>
 
         <div className="px-4 md:px-6 py-6 flex flex-col gap-6 max-w-2xl">
@@ -202,20 +202,20 @@ export default function Innstillinger() {
           </section>
 
           {/* Org section */}
-          <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-800">Organisasjon</h2>
+          <section className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-gray-100">Organisasjon</h2>
             </div>
             <div className="px-5 py-4">
               {loading ? (
-                <div className="h-8 bg-slate-100 rounded animate-pulse w-48" />
+                <div className="h-8 bg-slate-100 dark:bg-gray-800 rounded animate-pulse w-48" />
               ) : editingName ? (
                 <form onSubmit={handleSaveName} className="flex flex-col gap-3">
                   <input
                     required
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent w-full max-w-xs"
+                    className="border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-slate-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent w-full max-w-xs"
                     autoFocus
                   />
                   {nameError && (
@@ -235,12 +235,12 @@ export default function Innstillinger() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-slate-400 mb-0.5">Navn</p>
-                    <p className="text-sm font-semibold text-slate-800">{org?.name}</p>
+                    <p className="text-xs text-slate-400 dark:text-gray-500 mb-0.5">Navn</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-gray-100">{org?.name}</p>
                   </div>
                   {isAdmin && (
                     <button onClick={() => setEditingName(true)}
-                      className="text-xs text-brand-600 hover:text-brand-800 font-medium transition-colors">
+                      className="text-xs text-brand-600 dark:text-blue-400 hover:text-brand-800 dark:hover:text-blue-300 font-medium transition-colors">
                       Rediger
                     </button>
                   )}
@@ -250,34 +250,34 @@ export default function Innstillinger() {
           </section>
 
           {/* Team section */}
-          <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-800">Team</h2>
-              <span className="text-xs text-slate-400">{members.length} {members.length === 1 ? "person" : "personer"}</span>
+          <section className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-gray-100">Team</h2>
+              <span className="text-xs text-slate-400 dark:text-gray-500">{members.length} {members.length === 1 ? "person" : "personer"}</span>
             </div>
 
             {loading ? (
               <div className="p-5 flex flex-col gap-3">
                 {[0, 1].map((i) => (
-                  <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />
+                  <div key={i} className="h-10 bg-slate-100 dark:bg-gray-800 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-gray-800">
                 {members.map((m) => (
                   <div key={m.user_id} className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-semibold text-slate-500">
+                      <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">
                           {m.email.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 truncate">
+                        <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">
                           {m.email}
-                          {m.is_me && <span className="ml-1.5 text-xs text-slate-400 font-normal">(deg)</span>}
+                          {m.is_me && <span className="ml-1.5 text-xs text-slate-400 dark:text-gray-500 font-normal">(deg)</span>}
                         </p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-slate-400 dark:text-gray-500">
                           Ble med {new Date(m.joined_at).toLocaleDateString("nb-NO", { day: "2-digit", month: "short", year: "numeric" })}
                         </p>
                       </div>
@@ -291,14 +291,14 @@ export default function Innstillinger() {
 
           {/* Invite section */}
           {isAdmin && (
-            <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <h2 className="text-sm font-semibold text-slate-800">Inviter kollega</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Generer en invitasjonslenke som er gyldig i 7 dager</p>
+            <section className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-gray-100">Inviter kollega</h2>
+                <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">Generer en invitasjonslenke som er gyldig i 7 dager</p>
               </div>
               <div className="px-5 py-4 flex flex-col gap-3">
                 {inviteError && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{inviteError}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{inviteError}</p>
                 )}
 
                 {inviteLink ? (
@@ -306,7 +306,7 @@ export default function Innstillinger() {
                     <input
                       readOnly
                       value={inviteLink}
-                      className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-xs bg-slate-50 text-slate-700 min-w-0"
+                      className="flex-1 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs bg-slate-50 dark:bg-gray-800 text-slate-700 dark:text-gray-300 min-w-0"
                     />
                     <button
                       onClick={copyLink}
@@ -328,7 +328,7 @@ export default function Innstillinger() {
                 {inviteLink && (
                   <button
                     onClick={() => { setInviteLink(null); setCopied(false); }}
-                    className="self-start text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                    className="self-start text-xs text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
                   >
                     Generer ny lenke
                   </button>

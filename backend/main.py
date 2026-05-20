@@ -1,6 +1,8 @@
 import io
 import json
 import os
+import time
+from collections import defaultdict, deque
 from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 
@@ -92,6 +94,36 @@ def assert_user_owns_building(user_id: str, building_id: str):
     membership = supabase_client.table("org_members").select("id").eq("user_id", user_id).eq("org_id", org_id).execute()
     if not membership.data:
         raise HTTPException(status_code=403, detail="Ingen tilgang til dette bygget.")
+
+
+# ─── Rate limiting ────────────────────────────────────────────────────────────
+
+class RateLimiter:
+    """Per-user sliding-window rate limiter (in-memory, single instance)."""
+
+    def __init__(self, limit: int, window: int):
+        self.limit = limit
+        self.window = window
+        self._buckets: dict[str, deque] = defaultdict(deque)
+
+    def __call__(self, user=Depends(get_current_user)):
+        now = time.time()
+        bucket = self._buckets[user.id]
+        while bucket and bucket[0] <= now - self.window:
+            bucket.popleft()
+        if len(bucket) >= self.limit:
+            raise HTTPException(
+                status_code=429,
+                detail=f"For mange forespørsler. Maks {self.limit} per {self.window} sekunder.",
+                headers={"Retry-After": str(self.window)},
+            )
+        bucket.append(now)
+
+
+_chat_rate_limit    = RateLimiter(limit=20, window=60)
+_upload_rate_limit  = RateLimiter(limit=5,  window=60)
+_report_rate_limit  = RateLimiter(limit=10, window=60)
+_pattern_rate_limit = RateLimiter(limit=10, window=60)
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────
@@ -565,6 +597,7 @@ async def upload_document(
     project_id: str | None = Form(None),
     file: UploadFile = File(...),
     user=Depends(get_current_user),
+    _=Depends(_upload_rate_limit),
 ):
     if not building_id and not project_id:
         raise HTTPException(status_code=400, detail="building_id eller project_id er påkrevd.")
@@ -640,7 +673,7 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/chat")
-def chat(request: ChatRequest, user=Depends(get_current_user)):
+def chat(request: ChatRequest, user=Depends(get_current_user), _=Depends(_chat_rate_limit)):
     q = (request.question or request.message or "").strip()
     if not q:
         raise HTTPException(status_code=400, detail="Spørsmål kan ikke være tomt.")
@@ -1614,7 +1647,7 @@ def _analyze_patterns(asset_id: str) -> dict:
 
 
 @app.get("/assets/{asset_id}/pattern-analysis")
-def get_asset_pattern_analysis(asset_id: str, building_id: str, user=Depends(get_current_user)):
+def get_asset_pattern_analysis(asset_id: str, building_id: str, user=Depends(get_current_user), _=Depends(_pattern_rate_limit)):
     assert_user_owns_building(user.id, building_id)
     asset = supabase_client.table("assets").select("id, name, category").eq("id", asset_id).eq("building_id", building_id).execute()
     if not asset.data:
@@ -1631,7 +1664,7 @@ class GenerateReportFormRequest(BaseModel):
 
 
 @app.post("/reports/generate-form")
-def generate_report_form(body: GenerateReportFormRequest, user=Depends(get_current_user)):
+def generate_report_form(body: GenerateReportFormRequest, user=Depends(get_current_user), _=Depends(_report_rate_limit)):
     assert_user_owns_building(user.id, body.building_id)
 
     asset = supabase_client.table("assets").select("*").eq("id", body.asset_id).execute()

@@ -260,6 +260,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
             </button>
             <Link
+              href="/profil"
+              className={`p-2 transition-colors ${
+                isActive('/profil')
+                  ? 'text-brand-600 dark:text-blue-400'
+                  : 'text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+              aria-label="Min profil"
+            >
+              <User size={18} />
+            </Link>
+            <Link
               href="/innstillinger"
               className={`p-2 transition-colors ${
                 isActive('/innstillinger')

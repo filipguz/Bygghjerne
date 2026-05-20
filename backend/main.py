@@ -156,7 +156,7 @@ def list_projects(user=Depends(get_current_user)):
     result = supabase_client.table("projects").select("*").eq("org_id", org["id"]).order("name").execute()
     projects = result.data or []
     for p in projects:
-        if p.get("lat") and p.get("lng"):
+        if p.get("lat") is not None and p.get("lng") is not None:
             p["coordinates"] = [p["lat"], p["lng"]]
     return projects
 
@@ -172,7 +172,7 @@ def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
     payload["org_id"] = org["id"]
     result = supabase_client.table("projects").insert(payload).execute()
     row = result.data[0] if result.data else {}
-    if row.get("lat") and row.get("lng"):
+    if row.get("lat") is not None and row.get("lng") is not None:
         row["coordinates"] = [row["lat"], row["lng"]]
     return row
 
@@ -205,7 +205,7 @@ def update_project(project_id: str, body: UpdateProjectRequest, user=Depends(get
         raise HTTPException(status_code=400, detail="Ingen felter å oppdatere.")
     updated = supabase_client.table("projects").update(patch).eq("id", project_id).execute()
     row = updated.data[0] if updated.data else {}
-    if row.get("lat") and row.get("lng"):
+    if row.get("lat") is not None and row.get("lng") is not None:
         row["coordinates"] = [row["lat"], row["lng"]]
     return row
 
@@ -224,7 +224,7 @@ def get_project(project_id: str, user=Depends(get_current_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="Prosjekt ikke funnet.")
     project = result.data[0]
-    if project.get("lat") and project.get("lng"):
+    if project.get("lat") is not None and project.get("lng") is not None:
         project["coordinates"] = [project["lat"], project["lng"]]
     docs = supabase_client.table("documents").select("id, filename, created_at").eq("project_id", project_id).execute()
     project["documents"] = docs.data or []

@@ -469,8 +469,11 @@ export default function ProjectDetailPage() {
     )
   }
 
+  const ANALYSIS_KEY_ORDER = ['sol', 'støy', 'flom', 'fjernvirkning']
   const analysisEntries = project.analysis
-    ? (Object.entries(project.analysis) as Array<[string, { score: number; label: string; description: string }]>)
+    ? ANALYSIS_KEY_ORDER
+        .filter((k) => k in project.analysis!)
+        .map((k) => [k, project.analysis![k as keyof typeof project.analysis]] as [string, { score: number; label: string; description: string }])
     : []
 
   const zoningIdx = ZONING_STEPS.findIndex((s) =>

@@ -18,7 +18,7 @@ from supabase import create_client
 
 load_dotenv()
 
-app = FastAPI(title="Serv24 API")
+app = FastAPI(title="Bygghjerne API")
 
 app.add_middleware(
     CORSMiddleware,

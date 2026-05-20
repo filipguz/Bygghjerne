@@ -33,7 +33,7 @@ function compute(project: Project, sp: number, bk: number, sg: number, ekPct: nu
   const finansKost = lan * (rente / 100) * aar
   const nettoFort  = bruttoFort - finansKost
   const roe        = ek > 0 ? (nettoFort / ek) * 100 : 0
-  const irr        = aar > 0 ? (Math.pow(Math.max(0, 1 + roe / 100), 1 / aar) - 1) * 100 : 0
+  const irr        = aar > 0 && (1 + roe / 100) > 0 ? (Math.pow(1 + roe / 100, 1 / aar) - 1) * 100 : 0
   return { salgsverdi, bygging, tomt, prosjAdmin, salgsKost, totalKost, bruttoFort, bruttoMargin, ek, lan, finansKost, nettoFort, roe, irr }
 }
 
@@ -44,7 +44,7 @@ export default function FinancialCalculator({ project }: Props) {
   const [sg,    setSg]    = useState(90)
   const [ekPct, setEkPct] = useState(30)
   const [rente, setRente] = useState(5.5)
-  const [aar,   setAar]   = useState(Math.max(2, (project.completion_year ?? 2027) - 2025))
+  const [aar,   setAar]   = useState(Math.max(2, (project.completion_year ?? (new Date().getFullYear() + 2)) - new Date().getFullYear()))
 
   const r = useMemo(() => compute(project, sp, bk, sg, ekPct, rente, aar),
     [project, sp, bk, sg, ekPct, rente, aar])

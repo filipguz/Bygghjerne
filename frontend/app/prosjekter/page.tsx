@@ -301,6 +301,22 @@ export default function ProjectsDashboard() {
                 <div key={i} className="h-40 rounded-xl bg-slate-100 dark:bg-gray-800 animate-pulse" />
               ))}
             </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-400 dark:text-red-500">
+                <Building2 size={26} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-700 dark:text-gray-300">Kunne ikke laste prosjekter</p>
+                <p className="text-xs text-slate-400 dark:text-gray-600 mt-1">Sjekk nettverkstilkoblingen og prøv igjen.</p>
+              </div>
+              <button
+                onClick={loadProjects}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Prøv igjen
+              </button>
+            </div>
           ) : (
             <AnimatePresence mode="wait">
               <motion.div

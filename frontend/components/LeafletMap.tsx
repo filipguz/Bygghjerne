@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<string, string> = {
 function FlyToProject({ project }: { project: Project | null }) {
   const map = useMap()
   useEffect(() => {
-    if (project) map.flyTo(project.coordinates, 14, { duration: 1.2 })
+    if (project?.coordinates) map.flyTo(project.coordinates, 14, { duration: 1.2 })
   }, [project, map])
   return null
 }
@@ -22,10 +22,11 @@ function FlyToProject({ project }: { project: Project | null }) {
 function FitProjects({ projects }: { projects: Project[] }) {
   const map = useMap()
   useEffect(() => {
-    if (projects.length === 0) return
-    if (projects.length === 1) { map.setView(projects[0].coordinates, 13); return }
-    const lats = projects.map((p) => p.coordinates[0])
-    const lngs = projects.map((p) => p.coordinates[1])
+    const located = projects.filter((p) => p.coordinates)
+    if (located.length === 0) return
+    if (located.length === 1) { map.setView(located[0].coordinates!, 13); return }
+    const lats = located.map((p) => p.coordinates![0])
+    const lngs = located.map((p) => p.coordinates![1])
     map.fitBounds(
       [[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]],
       { padding: [48, 48] }
@@ -67,10 +68,10 @@ export default function LeafletMap({ projects, selected, onSelect, showPlans = f
       <FitProjects projects={projects} />
       <FlyToProject project={selected} />
 
-      {projects.map((p) => (
+      {projects.filter((p) => p.coordinates).map((p) => (
         <CircleMarker
           key={p.id}
-          center={p.coordinates}
+          center={p.coordinates!}
           radius={selected?.id === p.id ? 10 : 7}
           pathOptions={{
             color:       STATUS_COLORS[p.status],

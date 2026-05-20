@@ -11,7 +11,7 @@ export interface Project {
   name: string
   location: string
   address: string
-  coordinates: [number, number]
+  coordinates?: [number, number]
   status: ProjectStatus
   bra_m2: number
   units: number

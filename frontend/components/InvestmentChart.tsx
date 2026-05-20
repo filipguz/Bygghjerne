@@ -3,12 +3,10 @@
 import { useState } from 'react'
 import { Project } from '@/types/projects'
 
-const STATUS_COLOR: Record<string, string> = {
-  mulighetsstudie: '#8b5cf6',
-  regulering:      '#f59e0b',
-  prosjektering:   '#3b82f6',
-  salg:            '#10b981',
-}
+const PALETTE = [
+  '#8b5cf6', '#10b981', '#3b82f6', '#f59e0b',
+  '#ef4444', '#06b6d4', '#ec4899', '#84cc16',
+]
 
 interface Props { projects: Project[] }
 
@@ -19,7 +17,7 @@ export default function InvestmentChart({ projects }: Props) {
   const cx = 80, cy = 80, R = 58, r = 36, gap = 0.03
   let cumAngle = -Math.PI / 2
 
-  const slices = projects.map((p) => {
+  const slices = projects.map((p, i) => {
     const fraction   = (p.investment_mnok ?? 0) / total
     const sweep      = fraction * 2 * Math.PI - gap
     const startAngle = cumAngle + gap / 2
@@ -40,7 +38,7 @@ export default function InvestmentChart({ projects }: Props) {
       'Z',
     ].join(' ')
 
-    return { p, d, fraction, color: STATUS_COLOR[p.status] }
+    return { p, d, fraction, color: PALETTE[i % PALETTE.length] }
   })
 
   const active = hovered ? projects.find((p) => p.id === hovered) : null

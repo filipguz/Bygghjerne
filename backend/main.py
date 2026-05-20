@@ -667,7 +667,7 @@ def chat(request: ChatRequest, user=Depends(get_current_user)):
     ai_message = anthropic_client.messages.create(
         model=CHAT_MODEL,
         max_tokens=1024,
-        system=system_prompt,
+        system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
         messages=[
             {
                 "role": "user",
@@ -1144,8 +1144,8 @@ def chat_with_tools(question: str, building_id: str, user_id: str) -> dict:
         response = anthropic_client.messages.create(
             model=CHAT_MODEL,
             max_tokens=2048,
-            system=CMMS_SYSTEM_PROMPT,
-            tools=CMMS_TOOLS,
+            system=_CMMS_SYSTEM_CACHED,
+            tools=_CMMS_TOOLS_CACHED,
             messages=messages,
         )
 
@@ -1262,6 +1262,9 @@ PROJECT_TOOLS = [
     },
 ]
 
+_PROJECT_SYSTEM_CACHED = [{"type": "text", "text": PROJECT_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
+_PROJECT_TOOLS_CACHED = [*PROJECT_TOOLS[:-1], {**PROJECT_TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
+
 
 def _proj_get_summary(project_id: str) -> dict:
     result = supabase_client.table("projects").select("*").eq("id", project_id).execute()
@@ -1357,8 +1360,8 @@ def chat_with_project_tools(question: str, project_id: str, user_id: str) -> dic
         response = anthropic_client.messages.create(
             model=CHAT_MODEL,
             max_tokens=2048,
-            system=PROJECT_SYSTEM_PROMPT,
-            tools=PROJECT_TOOLS,
+            system=_PROJECT_SYSTEM_CACHED,
+            tools=_PROJECT_TOOLS_CACHED,
             messages=messages,
         )
 
@@ -1690,6 +1693,9 @@ CMMS_TOOLS.extend([
         },
     },
 ])
+
+_CMMS_SYSTEM_CACHED = [{"type": "text", "text": CMMS_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
+_CMMS_TOOLS_CACHED = [*CMMS_TOOLS[:-1], {**CMMS_TOOLS[-1], "cache_control": {"type": "ephemeral"}}]
 
 
 def _tool_get_inspection_history(asset_id: str, limit: int = 10) -> list:

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, FileText, Sun, Volume2, Droplets, Eye,
   Upload, Send, Loader2, ChevronDown, ChevronUp, Settings2, Check,
-  Trash2, Bot, Plus, X,
+  Trash2, Bot, Plus, X, Pencil,
 } from 'lucide-react'
 import ProsjekterShell from '@/components/ProsjekterShell'
 import ProjectStatusBadge from '@/components/ProjectStatusBadge'
@@ -151,6 +151,11 @@ export default function ProjectDetailPage() {
   const [eiendomLoading, setEiendomLoading] = useState(false)
   const [arealplaner, setArealplaner]     = useState<ArealplanItem[]>([])
   const [arealplanLoading, setArealplanLoading] = useState(false)
+
+  // Edit project state
+  const [showEditModal, setShowEditModal]   = useState(false)
+  const [editForm, setEditForm]             = useState<Record<string, string>>({})
+  const [editSaving, setEditSaving]         = useState(false)
 
   // Unreal config state
   const [showUnrealConfig, setShowUnrealConfig] = useState(false)
@@ -312,6 +317,55 @@ export default function ProjectDetailPage() {
     }
   }
 
+  function openEditModal() {
+    if (!project) return
+    setEditForm({
+      name:             project.name ?? '',
+      address:          project.address ?? '',
+      location:         project.location ?? '',
+      status:           project.status ?? 'mulighetsstudie',
+      bra_m2:           project.bra_m2 != null ? String(project.bra_m2) : '',
+      units:            project.units != null ? String(project.units) : '',
+      floors:           project.floors != null ? String(project.floors) : '',
+      completion_year:  project.completion_year != null ? String(project.completion_year) : '',
+      investment_mnok:  project.investment_mnok != null ? String(project.investment_mnok) : '',
+      description:      project.description ?? '',
+    })
+    setShowEditModal(true)
+  }
+
+  async function handleEditSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!project) return
+    setEditSaving(true)
+    try {
+      const body: Record<string, string | number | null> = {
+        name:     editForm.name.trim() || null,
+        address:  editForm.address.trim() || null,
+        location: editForm.location.trim() || null,
+        status:   editForm.status || null,
+        ...(editForm.bra_m2          && { bra_m2:          parseInt(editForm.bra_m2) }),
+        ...(editForm.units           && { units:            parseInt(editForm.units) }),
+        ...(editForm.floors          && { floors:           parseInt(editForm.floors) }),
+        ...(editForm.completion_year && { completion_year:  parseInt(editForm.completion_year) }),
+        ...(editForm.investment_mnok && { investment_mnok:  parseFloat(editForm.investment_mnok) }),
+        description: editForm.description.trim() || null,
+      }
+      const res = await apiFetch(`/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setProject((p) => p ? { ...p, ...updated } : p)
+        setShowEditModal(false)
+      }
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   async function setStreamStatus(status: 'ready' | 'offline') {
     if (!project) return
     setSavingStream(true)
@@ -455,7 +509,18 @@ export default function ProjectDetailPage() {
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">{project.name}</h1>
               <p className="text-sm text-slate-500 dark:text-gray-500 mt-0.5">{project.address ?? project.location}</p>
             </div>
-            <ProjectStatusBadge status={project.status} />
+            <div className="flex items-center gap-2">
+              <ProjectStatusBadge status={project.status} />
+              {!id.startsWith('mock-') && (
+                <button
+                  onClick={openEditModal}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
+                  title="Rediger prosjekt"
+                >
+                  <Pencil size={15} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* BIM stats */}
@@ -1323,6 +1388,143 @@ export default function ProjectDetailPage() {
           </AnimatePresence>
         </div>
       </div>
+      {/* Edit project modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.18 }}
+              className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-2xl w-full max-w-lg"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-gray-800">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Rediger prosjekt</h2>
+                <button onClick={() => setShowEditModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400">
+                  <X size={15} />
+                </button>
+              </div>
+              <form onSubmit={handleEditSave} className="p-5 grid grid-cols-2 gap-3 max-h-[70vh] overflow-y-auto">
+                <div className="col-span-2 flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Prosjektnavn *</label>
+                  <input
+                    required
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Adresse</label>
+                  <input
+                    value={editForm.address}
+                    onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                    placeholder="Storgata 1, Oslo"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">By / område</label>
+                  <input
+                    value={editForm.location}
+                    onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+                    placeholder="Oslo"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  >
+                    <option value="mulighetsstudie">Mulighetsstudie</option>
+                    <option value="regulering">Regulering</option>
+                    <option value="prosjektering">Prosjektering</option>
+                    <option value="salg">Salg</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">BRA (m²)</label>
+                  <input
+                    type="number" min={0}
+                    value={editForm.bra_m2}
+                    onChange={(e) => setEditForm((f) => ({ ...f, bra_m2: e.target.value }))}
+                    placeholder="5000"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Antall enheter</label>
+                  <input
+                    type="number" min={0}
+                    value={editForm.units}
+                    onChange={(e) => setEditForm((f) => ({ ...f, units: e.target.value }))}
+                    placeholder="40"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Etasjer</label>
+                  <input
+                    type="number" min={0}
+                    value={editForm.floors}
+                    onChange={(e) => setEditForm((f) => ({ ...f, floors: e.target.value }))}
+                    placeholder="6"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Ferdigstillelsesår</label>
+                  <input
+                    type="number" min={2000} max={2100}
+                    value={editForm.completion_year}
+                    onChange={(e) => setEditForm((f) => ({ ...f, completion_year: e.target.value }))}
+                    placeholder="2027"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Investering (MNOK)</label>
+                  <input
+                    type="number" min={0} step="0.1"
+                    value={editForm.investment_mnok}
+                    onChange={(e) => setEditForm((f) => ({ ...f, investment_mnok: e.target.value }))}
+                    placeholder="120"
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="col-span-2 flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Beskrivelse</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Kort beskrivelse av prosjektet…"
+                    rows={3}
+                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+                  />
+                </div>
+                <div className="col-span-2 flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    Avbryt
+                  </button>
+                  <button type="submit" disabled={editSaving || !editForm.name?.trim()}
+                    className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition-colors flex items-center gap-2">
+                    {editSaving ? <><Loader2 size={13} className="animate-spin" /> Lagrer…</> : 'Lagre endringer'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ProsjekterShell>
   )
 }

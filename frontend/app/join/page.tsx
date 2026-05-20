@@ -97,7 +97,7 @@ function Join() {
         setSession(true);
         await handleJoin();
       } else {
-        const redirectTo = `${window.location.origin}/join?token=${token}`;
+        const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/join?token=${token}`)}`
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -164,7 +164,7 @@ function Join() {
               <h1 className="text-xl font-bold text-slate-900 mb-2">Sjekk e-posten din</h1>
               <p className="text-sm text-slate-500">
                 Vi har sendt en bekreftelseslenke til <strong>{email}</strong>.
-                Klikk på lenken i e-posten for å fullføre registreringen og bli med i{" "}
+                Klikk på lenken i e-posten — du blir ført automatisk tilbake hit for å bli med i{" "}
                 <strong>{orgName}</strong>.
               </p>
             </div>

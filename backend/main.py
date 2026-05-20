@@ -480,6 +480,10 @@ def create_invite(user=Depends(get_current_user)):
     return {"token": result.data[0]["token"]}
 
 
+def _parse_expires(expires_at: str) -> datetime:
+    return datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+
+
 @app.get("/orgs/invite/{token}")
 def preview_invite(token: str):
     result = supabase_client.table("org_invites").select(
@@ -488,7 +492,7 @@ def preview_invite(token: str):
     if not result.data:
         raise HTTPException(status_code=404, detail="Ugyldig invitasjonslenke.")
     row = result.data[0]
-    if row["expires_at"] < datetime.now(timezone.utc).isoformat():
+    if _parse_expires(row["expires_at"]) < datetime.now(timezone.utc):
         raise HTTPException(status_code=410, detail="Invitasjonslenken er utløpt.")
     return {"org_name": row["orgs"]["name"]}
 
@@ -504,13 +508,14 @@ def join_org(token: str, user=Depends(get_current_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="Ugyldig invitasjonslenke.")
     row = result.data[0]
-    if row["expires_at"] < datetime.now(timezone.utc).isoformat():
+    if _parse_expires(row["expires_at"]) < datetime.now(timezone.utc):
         raise HTTPException(status_code=410, detail="Invitasjonslenken er utløpt.")
     supabase_client.table("org_members").insert({
         "org_id": row["org_id"],
         "user_id": user.id,
         "role": "member",
     }).execute()
+    supabase_client.table("org_invites").delete().eq("token", token).execute()
     org = supabase_client.table("orgs").select("id, name").eq("id", row["org_id"]).execute()
     return org.data[0]
 

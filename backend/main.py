@@ -596,18 +596,22 @@ async def upload_document(
     doc_result = supabase_client.table("documents").insert(doc_payload).execute()
     document_id = doc_result.data[0]["id"]
 
-    chunks = chunk_text(text)
-    embeddings = voyage_client.embed(chunks, model=EMBEDDING_MODEL, input_type="document").embeddings
-    rows = [
-        {
-            "document_id": document_id,
-            "content": chunk,
-            "embedding": embedding,
-            "chunk_index": i,
-        }
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
-    ]
-    supabase_client.table("document_chunks").insert(rows).execute()
+    try:
+        chunks = chunk_text(text)
+        embeddings = voyage_client.embed(chunks, model=EMBEDDING_MODEL, input_type="document").embeddings
+        rows = [
+            {
+                "document_id": document_id,
+                "content": chunk,
+                "embedding": embedding,
+                "chunk_index": i,
+            }
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+        ]
+        supabase_client.table("document_chunks").insert(rows).execute()
+    except Exception as e:
+        supabase_client.table("documents").delete().eq("id", document_id).execute()
+        raise HTTPException(status_code=500, detail=f"Indeksering feilet: {e}")
 
     return {
         "document_id": document_id,

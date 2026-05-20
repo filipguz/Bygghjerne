@@ -313,16 +313,20 @@ export default function ProjectDetailPage() {
   function openEditModal() {
     if (!project) return
     setEditForm({
-      name:             project.name ?? '',
-      address:          project.address ?? '',
-      location:         project.location ?? '',
-      status:           project.status ?? 'mulighetsstudie',
-      bra_m2:           project.bra_m2 != null ? String(project.bra_m2) : '',
-      units:            project.units != null ? String(project.units) : '',
-      floors:           project.floors != null ? String(project.floors) : '',
-      completion_year:  project.completion_year != null ? String(project.completion_year) : '',
-      investment_mnok:  project.investment_mnok != null ? String(project.investment_mnok) : '',
-      description:      project.description ?? '',
+      name:                    project.name ?? '',
+      address:                 project.address ?? '',
+      location:                project.location ?? '',
+      status:                  project.status ?? 'mulighetsstudie',
+      bra_m2:                  project.bra_m2 != null ? String(project.bra_m2) : '',
+      units:                   project.units != null ? String(project.units) : '',
+      floors:                  project.floors != null ? String(project.floors) : '',
+      completion_year:         project.completion_year != null ? String(project.completion_year) : '',
+      investment_mnok:         project.investment_mnok != null ? String(project.investment_mnok) : '',
+      description:             project.description ?? '',
+      analysis_sol:            project.analysis?.sol?.score != null ? String(project.analysis.sol.score) : '',
+      analysis_støy:           project.analysis?.støy?.score != null ? String(project.analysis.støy.score) : '',
+      analysis_flom:           project.analysis?.flom?.score != null ? String(project.analysis.flom.score) : '',
+      analysis_fjernvirkning:  project.analysis?.fjernvirkning?.score != null ? String(project.analysis.fjernvirkning.score) : '',
     })
     setShowEditModal(true)
   }
@@ -332,7 +336,20 @@ export default function ProjectDetailPage() {
     if (!project) return
     setEditSaving(true)
     try {
-      const body: Record<string, string | number | null> = {
+      const ANALYSIS_KEYS = ['sol', 'støy', 'flom', 'fjernvirkning'] as const
+      const analysisUpdate = ANALYSIS_KEYS.reduce((acc, key) => {
+        const val = editForm[`analysis_${key}`]
+        if (val !== '') {
+          acc[key] = {
+            score:       Math.min(100, Math.max(0, parseInt(val) || 0)),
+            label:       project!.analysis?.[key]?.label ?? key,
+            description: project!.analysis?.[key]?.description ?? '',
+          }
+        }
+        return acc
+      }, {} as Record<string, { score: number; label: string; description: string }>)
+
+      const body: Record<string, unknown> = {
         name:     editForm.name.trim() || null,
         address:  editForm.address.trim() || null,
         location: editForm.location.trim() || null,
@@ -343,6 +360,9 @@ export default function ProjectDetailPage() {
         ...(editForm.completion_year && { completion_year:  parseInt(editForm.completion_year) }),
         ...(editForm.investment_mnok && { investment_mnok:  parseFloat(editForm.investment_mnok) }),
         description: editForm.description.trim() || null,
+        ...(Object.keys(analysisUpdate).length > 0 && {
+          analysis: { ...project!.analysis, ...analysisUpdate },
+        }),
       }
       const res = await apiFetch(`/projects/${project.id}`, {
         method: 'PATCH',
@@ -1489,6 +1509,28 @@ export default function ProjectDetailPage() {
                     placeholder="120"
                     className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
                   />
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500 dark:text-gray-400 font-medium mb-2">Analysescorer (0–100)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: 'sol',           label: 'Sol' },
+                      { key: 'støy',          label: 'Støy' },
+                      { key: 'flom',          label: 'Flom' },
+                      { key: 'fjernvirkning', label: 'Fjernvirkning' },
+                    ] as const).map(({ key, label }) => (
+                      <div key={key} className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-400 dark:text-gray-500">{label}</label>
+                        <input
+                          type="number" min={0} max={100}
+                          value={editForm[`analysis_${key}`]}
+                          onChange={(e) => setEditForm((f) => ({ ...f, [`analysis_${key}`]: e.target.value }))}
+                          placeholder="0–100"
+                          className="px-3 py-2 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-slate-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/40"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="col-span-2 flex flex-col gap-1">
                   <label className="text-xs text-slate-500 dark:text-gray-400 font-medium">Beskrivelse</label>

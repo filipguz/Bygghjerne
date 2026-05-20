@@ -498,18 +498,31 @@ def list_documents(
         query = query.eq("project_id", project_id)
     docs = query.order("created_at", desc=True).execute()
 
-    result = []
-    for doc in docs.data:
-        count_result = supabase_client.table("document_chunks").select(
-            "id", count="exact"
-        ).eq("document_id", doc["id"]).execute()
-        result.append({
+    if not docs.data:
+        return []
+
+    doc_ids = [doc["id"] for doc in docs.data]
+    chunks_rows = (
+        supabase_client.table("document_chunks")
+        .select("document_id")
+        .in_("document_id", doc_ids)
+        .execute()
+        .data or []
+    )
+    chunk_counts: dict[str, int] = {}
+    for row in chunks_rows:
+        did = row["document_id"]
+        chunk_counts[did] = chunk_counts.get(did, 0) + 1
+
+    return [
+        {
             "id": doc["id"],
             "filename": doc["filename"],
             "created_at": doc.get("created_at"),
-            "chunks": count_result.count or 0,
-        })
-    return result
+            "chunks": chunk_counts.get(doc["id"], 0),
+        }
+        for doc in docs.data
+    ]
 
 
 @app.delete("/documents/{document_id}")
@@ -1709,19 +1722,32 @@ def _tool_get_inspection_history(asset_id: str, limit: int = 10) -> list:
 
 def _tool_get_building_health_overview(building_id: str) -> list:
     assets = supabase_client.table("assets").select("id, name, category").eq("building_id", building_id).execute().data or []
-    result = []
-    for a in assets:
-        latest = (supabase_client.table("inspection_reports")
-                  .select("report_date, condition_score")
-                  .eq("asset_id", a["id"])
-                  .order("report_date", desc=True)
-                  .limit(1)
-                  .execute().data or [])
-        result.append({
+    if not assets:
+        return []
+
+    asset_ids = [a["id"] for a in assets]
+    reports = (
+        supabase_client.table("inspection_reports")
+        .select("asset_id, report_date, condition_score")
+        .in_("asset_id", asset_ids)
+        .order("report_date", desc=True)
+        .execute()
+        .data or []
+    )
+    # First occurrence per asset_id is the latest (already sorted desc)
+    latest: dict[str, dict] = {}
+    for r in reports:
+        if r["asset_id"] not in latest:
+            latest[r["asset_id"]] = r
+
+    result = [
+        {
             "id": a["id"], "name": a["name"], "category": a["category"],
-            "latest_condition_score": latest[0]["condition_score"] if latest else None,
-            "latest_report_date": latest[0]["report_date"] if latest else None,
-        })
+            "latest_condition_score": latest[a["id"]]["condition_score"] if a["id"] in latest else None,
+            "latest_report_date":    latest[a["id"]]["report_date"]    if a["id"] in latest else None,
+        }
+        for a in assets
+    ]
     result.sort(key=lambda x: (x["latest_condition_score"] or 99))
     return result
 

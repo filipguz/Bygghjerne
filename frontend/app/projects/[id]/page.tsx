@@ -17,7 +17,6 @@ import RadarChart from '@/components/RadarChart'
 import FinancialCalculator from '@/components/FinancialCalculator'
 import { Project } from '@/types/projects'
 import { apiFetch } from '@/utils/api'
-import { MOCK_PROJECTS } from '@/utils/mock-projects'
 
 const ThreeViewer = dynamic(() => import('@/components/ThreeViewer'), { ssr: false })
 const PixelStreamingViewer = dynamic(() => import('@/components/PixelStreamingViewer'), { ssr: false })
@@ -167,12 +166,6 @@ export default function ProjectDetailPage() {
   const [savingStream, setSavingStream]         = useState(false)
 
   useEffect(() => {
-    if (id.startsWith('mock-')) {
-      const mock = MOCK_PROJECTS.find((p) => p.id === id) ?? null
-      setProject(mock)
-      setLoading(false)
-      return
-    }
     apiFetch(`/projects/${id}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
@@ -216,7 +209,7 @@ export default function ProjectDetailPage() {
   }, [project?.coordinates])
 
   useEffect(() => {
-    if (activeTab !== 'salg' || id.startsWith('mock-')) return
+    if (activeTab !== 'salg') return
     setUnitsLoading(true)
     apiFetch(`/projects/${id}/units`)
       .then((r) => r.ok ? r.json() : [])
@@ -511,15 +504,13 @@ export default function ProjectDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <ProjectStatusBadge status={project.status} />
-              {!id.startsWith('mock-') && (
-                <button
-                  onClick={openEditModal}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
-                  title="Rediger prosjekt"
-                >
-                  <Pencil size={15} />
-                </button>
-              )}
+              <button
+                onClick={openEditModal}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
+                title="Rediger prosjekt"
+              >
+                <Pencil size={15} />
+              </button>
             </div>
           </div>
 
@@ -1039,14 +1030,12 @@ export default function ProjectDetailPage() {
                         </div>
                       )}
                     </div>
-                    {!id.startsWith('mock-') && (
-                      <button
-                        onClick={() => { setEditingUnit(null); setUnitForm(EMPTY_UNIT_FORM); setShowUnitModal(true) }}
-                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
-                      >
-                        <Plus size={13} /> Legg til enhet
-                      </button>
-                    )}
+                    <button
+                      onClick={() => { setEditingUnit(null); setUnitForm(EMPTY_UNIT_FORM); setShowUnitModal(true) }}
+                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
+                    >
+                      <Plus size={13} /> Legg til enhet
+                    </button>
                   </div>
 
                   {unitsLoading ? (
@@ -1157,35 +1146,33 @@ export default function ProjectDetailPage() {
                                 </div>
                               </div>
 
-                              {!id.startsWith('mock-') && (
-                                <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-gray-800">
-                                  <button
-                                    onClick={() => {
-                                      setEditingUnit(selectedUnit)
-                                      setUnitForm({
-                                        unit_number: selectedUnit.unit_number,
-                                        floor: String(selectedUnit.floor),
-                                        bra_m2: selectedUnit.bra_m2 != null ? String(selectedUnit.bra_m2) : '',
-                                        rooms: selectedUnit.rooms != null ? String(selectedUnit.rooms) : '',
-                                        price_nok: selectedUnit.price_nok != null ? String(selectedUnit.price_nok) : '',
-                                        status: selectedUnit.status,
-                                        description: selectedUnit.description ?? '',
-                                      })
-                                      setShowUnitModal(true)
-                                    }}
-                                    className="flex-1 text-xs py-1.5 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
-                                  >
-                                    Rediger
-                                  </button>
-                                  <button
-                                    onClick={() => handleUnitDelete(selectedUnit.id)}
-                                    disabled={unitDeleting === selectedUnit.id}
-                                    className="px-3 text-xs py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              )}
+                              <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-gray-800">
+                                <button
+                                  onClick={() => {
+                                    setEditingUnit(selectedUnit)
+                                    setUnitForm({
+                                      unit_number: selectedUnit.unit_number,
+                                      floor: String(selectedUnit.floor),
+                                      bra_m2: selectedUnit.bra_m2 != null ? String(selectedUnit.bra_m2) : '',
+                                      rooms: selectedUnit.rooms != null ? String(selectedUnit.rooms) : '',
+                                      price_nok: selectedUnit.price_nok != null ? String(selectedUnit.price_nok) : '',
+                                      status: selectedUnit.status,
+                                      description: selectedUnit.description ?? '',
+                                    })
+                                    setShowUnitModal(true)
+                                  }}
+                                  className="flex-1 text-xs py-1.5 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                  Rediger
+                                </button>
+                                <button
+                                  onClick={() => handleUnitDelete(selectedUnit.id)}
+                                  disabled={unitDeleting === selectedUnit.id}
+                                  className="px-3 text-xs py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             </div>
                           </motion.div>
                         )}

@@ -62,7 +62,6 @@ export default function FinancialCalculator({ project }: Props) {
     { label: 'Salgskostnader',value: r.salgsKost,  color: '#ec4899' },
     { label: 'Netto',         value: Math.max(0, r.nettoFort), color: '#10b981' },
   ]
-  const chartTotal = chartBars.reduce((s, b) => s + b.value, 0)
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
@@ -124,7 +123,7 @@ export default function FinancialCalculator({ project }: Props) {
                     <p className="text-[10px] text-slate-400 dark:text-gray-600 mb-2">Kostnadsfordeling (av salgsverdi)</p>
                     <div className="flex h-5 rounded-lg overflow-hidden gap-px mb-3">
                       {chartBars.map((bar) => {
-                        const pct = chartTotal > 0 ? Math.max(0, (bar.value / r.salgsverdi) * 100) : 0
+                        const pct = r.salgsverdi > 0 ? Math.max(0, (bar.value / r.salgsverdi) * 100) : 0
                         return (
                           <motion.div key={bar.label} className="h-full relative group cursor-pointer"
                             style={{ background: bar.color }}

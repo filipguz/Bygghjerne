@@ -103,9 +103,8 @@ function Login() {
         }
         router.refresh();
       } else {
-        const redirectTo = next
-          ? `${window.location.origin}${next}`
-          : `${window.location.origin}/onboarding`;
+        const destination = next ?? '/onboarding'
+        const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`
         const { error } = await supabase.auth.signUp({
           email,
           password,

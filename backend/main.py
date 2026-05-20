@@ -2,6 +2,7 @@ import io
 import json
 import os
 from datetime import date, datetime, timedelta, timezone
+from functools import lru_cache
 
 import anthropic
 import httpx
@@ -78,11 +79,16 @@ def _get_user_org(user_id: str) -> dict | None:
     return {"role": row["role"], "id": row["orgs"]["id"], "name": row["orgs"]["name"]}
 
 
+@lru_cache(maxsize=512)
+def _get_building_org_id(building_id: str) -> str | None:
+    result = supabase_client.table("buildings").select("org_id").eq("id", building_id).execute()
+    return result.data[0]["org_id"] if result.data else None
+
+
 def assert_user_owns_building(user_id: str, building_id: str):
-    building = supabase_client.table("buildings").select("org_id").eq("id", building_id).execute()
-    if not building.data:
+    org_id = _get_building_org_id(building_id)
+    if org_id is None:
         raise HTTPException(status_code=404, detail="Bygget finnes ikke.")
-    org_id = building.data[0]["org_id"]
     membership = supabase_client.table("org_members").select("id").eq("user_id", user_id).eq("org_id", org_id).execute()
     if not membership.data:
         raise HTTPException(status_code=403, detail="Ingen tilgang til dette bygget.")
@@ -106,6 +112,7 @@ def health():
 VALID_PROJECT_STATUSES = {"mulighetsstudie", "regulering", "prosjektering", "salg"}
 
 
+@lru_cache(maxsize=512)
 def _get_project_org(project_id: str) -> str | None:
     result = supabase_client.table("projects").select("org_id").eq("id", project_id).execute()
     if not result.data:

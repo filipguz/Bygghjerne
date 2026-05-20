@@ -71,6 +71,8 @@ function WorkOrderFormModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const inputCls = "w-full border border-slate-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -107,10 +109,10 @@ function WorkOrderFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6 flex flex-col gap-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-xl p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-900">{existing ? "Rediger arbeidsordre" : "Ny arbeidsordre"}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
+          <h2 className="font-semibold text-slate-900 dark:text-gray-100">{existing ? "Rediger arbeidsordre" : "Ny arbeidsordre"}</h2>
+          <button onClick={onClose} className="text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 transition-colors">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -121,22 +123,22 @@ function WorkOrderFormModal({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Tittel *</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Tittel *</label>
             <input required value={title} onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className={inputCls}
               placeholder="f.eks. Inspeksjon av sprinkleranlegg" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Beskrivelse</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Beskrivelse</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
+              className={`${inputCls} resize-none`}
               placeholder="Detaljer, instrukser…" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Prioritet</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Prioritet</label>
               <select value={priority} onChange={(e) => setPriority(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white">
+                className={inputCls}>
                 <option value="low">Lav</option>
                 <option value="medium">Medium</option>
                 <option value="high">Høy</option>
@@ -144,16 +146,16 @@ function WorkOrderFormModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Forfallsdato</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Forfallsdato</label>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" />
+                className={inputCls} />
             </div>
           </div>
           {assets.length > 0 && (
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Eiendel</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-gray-400 mb-1">Eiendel</label>
               <select value={assetId} onChange={(e) => setAssetId(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white">
+                className={inputCls}>
                 <option value="">Ingen eiendel</option>
                 {assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
@@ -165,7 +167,7 @@ function WorkOrderFormModal({
               {saving ? "Lagrer…" : existing ? "Lagre endringer" : "Opprett arbeidsordre"}
             </button>
             <button type="button" onClick={onClose}
-              className="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 transition-colors">
+              className="px-4 py-2.5 text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-gray-100 transition-colors">
               Avbryt
             </button>
           </div>
@@ -254,8 +256,8 @@ export default function Arbeidsordre() {
     <AppShell>
       <div className="flex flex-col flex-1 overflow-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 shrink-0">
-          <h1 className="text-lg font-bold text-slate-900">Arbeidsordre</h1>
+        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 shrink-0">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-gray-100">Arbeidsordre</h1>
           <button
             onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-1.5 bg-brand-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
@@ -268,21 +270,21 @@ export default function Arbeidsordre() {
         </div>
 
         {/* Filters */}
-        <div className="px-6 py-3 bg-white border-b border-slate-100 flex items-center gap-3 flex-wrap shrink-0">
+        <div className="px-6 py-3 bg-white dark:bg-gray-900 border-b border-slate-100 dark:border-gray-800 flex items-center gap-3 flex-wrap shrink-0">
           <div className="flex gap-1.5">
             {STATUS_OPTIONS.map((s) => (
               <button key={s.value} onClick={() => setStatusFilter(s.value)}
                 className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
                   statusFilter === s.value
                     ? "bg-brand-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-700"
                 }`}>
                 {s.label}
               </button>
             ))}
           </div>
           <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}
-            className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            className="text-xs border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
             {PRIORITY_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
@@ -292,11 +294,11 @@ export default function Arbeidsordre() {
           {loading ? (
             <div className="space-y-3">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl h-16 animate-pulse" />
+                <div key={i} className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-xl h-16 animate-pulse" />
               ))}
             </div>
           ) : orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-gray-600 gap-3">
               <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -308,14 +310,18 @@ export default function Arbeidsordre() {
               </button>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <div className="divide-y divide-slate-100">
+            <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+              <div className="divide-y divide-slate-100 dark:divide-gray-800">
                 {orders.map((wo) => {
                   const overdue = isOverdue(wo.due_date, wo.status);
                   const transitions = STATUS_TRANSITIONS[wo.status] ?? [];
                   const primaryNext = transitions[0];
                   return (
-                    <div key={wo.id} className={`flex items-start gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${overdue ? "bg-red-50/50 hover:bg-red-50" : ""}`}>
+                    <div key={wo.id} className={`flex items-start gap-4 px-5 py-4 transition-colors ${
+                      overdue
+                        ? "bg-red-50/50 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        : "hover:bg-slate-50 dark:hover:bg-gray-800/50"
+                    }`}>
                       {/* Priority */}
                       <div className="shrink-0 pt-0.5">
                         <PriorityBadge priority={wo.priority} />
@@ -323,20 +329,20 @@ export default function Arbeidsordre() {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 leading-tight">{wo.title}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-gray-200 leading-tight">{wo.title}</p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                           {wo.assets && (
-                            <span className="text-xs text-slate-400">{wo.assets.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-gray-500">{wo.assets.name}</span>
                           )}
                           {wo.due_date && (
-                            <span className={`text-xs ${overdue ? "text-red-600 font-medium" : "text-slate-400"}`}>
+                            <span className={`text-xs ${overdue ? "text-red-600 font-medium" : "text-slate-400 dark:text-gray-500"}`}>
                               {overdue ? "Forfalt " : ""}{formatDate(wo.due_date)}
                             </span>
                           )}
-                          <span className="text-xs text-slate-300">Opprettet {formatDate(wo.created_at)}</span>
+                          <span className="text-xs text-slate-300 dark:text-gray-600">Opprettet {formatDate(wo.created_at)}</span>
                         </div>
                         {wo.description && (
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-1">{wo.description}</p>
+                          <p className="text-xs text-slate-500 dark:text-gray-500 mt-1 line-clamp-1">{wo.description}</p>
                         )}
                       </div>
 
@@ -355,7 +361,7 @@ export default function Arbeidsordre() {
                         )}
 
                         <button onClick={() => { setEditing(wo); setShowForm(true); }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Rediger">
+                          className="p-1.5 rounded-lg text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors" title="Rediger">
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                               d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a4 4 0 01-1.414.93l-3 1 1-3a4 4 0 01.93-1.414z" />
@@ -365,17 +371,17 @@ export default function Arbeidsordre() {
                         {confirmDelete === wo.id ? (
                           <>
                             <button onClick={() => handleDelete(wo.id)} disabled={deletingId === wo.id}
-                              className="text-xs text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors disabled:opacity-60">
+                              className="text-xs text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60">
                               {deletingId === wo.id ? "…" : "Slett"}
                             </button>
                             <button onClick={() => setConfirmDelete(null)}
-                              className="text-xs text-slate-500 px-2 py-1 rounded hover:bg-slate-100 transition-colors">
+                              className="text-xs text-slate-500 dark:text-gray-400 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors">
                               Nei
                             </button>
                           </>
                         ) : (
                           <button onClick={() => setConfirmDelete(wo.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Slett">
+                            className="p-1.5 rounded-lg text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Slett">
                             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

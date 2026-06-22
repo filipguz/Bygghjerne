@@ -1,13 +1,15 @@
-import Image from "next/image";
 import Link from "next/link";
 import PublicNav from "@/components/PublicNav";
 
+/*
 const founder = {
   name: "Filip Gustavsen",
   role: "Grunder & Utvikler",
   photo: "/profil1.jpeg",
   bio: "Filip er selvlært utvikler med bakgrunn fra Kristiansand-regionen. Han bygger Bygghjerne for å samle det som i dag er spredt over mange systemer — driftsdokumenter, vedlikehold, arbeidsordre og prosjektportefølje — på ett sted, med AI som gjør informasjonen søkbar på norsk.",
 };
+
+ */
 
 const roadmap = [
   {
@@ -134,7 +136,7 @@ export default function OmOss() {
       </section>
 
       {/* Founder */}
-      <section className="bg-navy-900 py-16 px-6">
+      {/* <section className="bg-navy-900 py-16 px-6">
         <div className="max-w-sm mx-auto text-center">
           <h2 className="text-2xl font-bold text-white mb-10">Mennesket bak</h2>
           <div className="bg-white/5 rounded-2xl p-8 border border-white/10 flex flex-col items-center gap-4">
@@ -150,7 +152,8 @@ export default function OmOss() {
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
+
 
       {/* Roadmap */}
       <section className="py-16 px-6">
